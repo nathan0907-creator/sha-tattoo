@@ -247,9 +247,9 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   assert.match(texteUne, /Sha Tattoo/);
   assert.match(texteUne, /9 Route de Lille/);
   assert.match(texteUne, /Ouvert du mardi au samedi/);
-  assert.match(texteUne, /Tatouage en traits fins \(fineline\)/);
-  assert.match(texteUne, /Seulement par devis/);
-  assert.ok(une.html.includes('<s>Tatouage en traits fins (fineline)</s>'), 'la carte est barrée');
+  assert.match(texteUne, /Trait fin/);
+  assert.match(texteUne, /Mais seulement par devis/);
+  assert.ok(!une.html.includes('<s>'), 'la carte n’est plus barrée');
   // Le téléphone ne paraît que dans le pied de page
   for (const chemin of ['/', '/rendez-vous', '/nous-trouver', '/prestations']) {
     const html = (await page(chemin)).html;

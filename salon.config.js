@@ -62,12 +62,8 @@ module.exports = {
   },
 
   // La carte : les spécialités du salon (les prix sont donnés dans le devis).
-  specialties: [
-    'Tatouage en traits fins (fineline)',
-    'Noir et blanc, ombrages (black and grey)',
-    'Projets personnalisés, floraux et lettrages',
-    'Strass dentaires et blanchiment',
-  ],
+  // Shannon complète la liste elle-même (espace salon, Réglages → La carte).
+  specialties: ['Trait fin'],
 
   // Texte de présentation de la une, un paragraphe par ligne (modifiable depuis l'espace salon).
   about: {

@@ -1202,16 +1202,74 @@ label.btn {
 
 /* ── La carte : les spécialités, et une seule option, le devis ───────── */
 
+/* Sur téléphone : la liste, le post-it, puis le bouton. À partir de la tablette : la liste à
+   gauche, le post-it à droite, le bouton sous la liste. */
 .carte-devis {
   display: grid;
-  gap: 1.6rem;
+  gap: 1.8rem 2.4rem;
 }
 
-@media (min-width: 52rem) {
+@media (min-width: 40rem) {
   .carte-devis {
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 17rem);
     align-items: start;
   }
+
+  .carte-liste,
+  .carte-action {
+    grid-column: 1;
+  }
+
+  .post-it {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+
+/* Le post-it : un carré jaune pâle, un peu de travers, avec son bout de ruban adhésif. */
+.post-it {
+  --tilt: 3deg;
+
+  position: relative;
+  justify-self: center;
+  display: grid;
+  place-content: center;
+  width: min(100%, 15rem);
+  aspect-ratio: 1;
+  margin: .6rem 0 0;
+  padding: 1.4rem 1.2rem;
+  background: linear-gradient(170deg, #fff6b8 0%, #fdee96 70%, #f6e17c 100%);
+  box-shadow: 0 1.4rem 1.6rem -1.1rem rgba(44, 32, 56, .55), inset 0 -.6rem .9rem -.6rem rgba(120, 90, 0, .18);
+  color: var(--ink);
+  font-family: var(--font-name);
+  font-size: clamp(2rem, 6vw, 2.4rem);
+  line-height: 1.05;
+  text-align: center;
+  rotate: var(--tilt);
+}
+
+.post-it span {
+  display: block;
+  margin-top: .25rem;
+  color: var(--gold);
+  font-size: 1.15em;
+}
+
+.post-it::before {
+  content: "";
+  position: absolute;
+  top: -.7rem;
+  left: 50%;
+  width: 5rem;
+  height: 1.4rem;
+  margin-left: -2.5rem;
+  background: var(--tape);
+  box-shadow: 0 1px 2px rgba(44, 32, 56, .18);
+  rotate: -4deg;
+}
+
+.carte-action {
+  margin: 0;
 }
 
 .carte-liste {
@@ -1237,50 +1295,6 @@ label.btn {
   height: .55rem;
   background: var(--gold);
   translate: 0 -.15em;
-}
-
-.carte-option {
-  position: relative;
-  display: grid;
-  gap: .8rem;
-  padding: 1.6rem 1.4rem 1.4rem;
-  border: 1px solid var(--ink);
-  background: var(--white);
-  box-shadow: 0 1.4rem 2.2rem -1.6rem rgba(44, 32, 56, .55);
-}
-
-.carte-option::before {
-  content: "";
-  position: absolute;
-  top: -.75rem;
-  left: 50%;
-  width: 5.5rem;
-  height: 1.5rem;
-  margin-left: -2.75rem;
-  background: var(--tape);
-  rotate: -2deg;
-}
-
-.carte-option-titre {
-  font-family: var(--font-poster);
-  font-size: clamp(2.2rem, 5vw, 3rem);
-  line-height: .95;
-  text-transform: uppercase;
-}
-
-.carte-option-titre span {
-  color: var(--gold-display);
-  font-family: var(--font-name);
-  text-transform: none;
-}
-
-.carte-option-texte {
-  color: var(--muted);
-  font-style: italic;
-}
-
-.carte-option .btn {
-  width: 100%;
 }
 
 /* Les annonces du calendrier (« À noter ») */
@@ -1349,74 +1363,92 @@ label.btn {
   font-weight: 700;
 }
 
-/* ── La carte barrée, avec l'étiquette « Seulement par devis » collée par-dessus ── */
 
-.carte-devis {
-  grid-template-columns: minmax(0, 1fr) !important;
+/* ── Téléphone et tablette : centrages et vides ──────────────────────── */
+
+/* La ligne sous le titre du journal : chaque mention reste centrée, même quand elle passe à la ligne. */
+.masthead-line span {
+  text-align: center;
+  text-wrap: balance;
 }
 
-.carte-barree {
-  position: relative;
+/* L'article de la une : en colonne étroite, le texte justifié creusait de grands trous entre les
+   mots ; il est aligné à gauche, avec des fins de ligne équilibrées. */
+.lead-text .columns {
+  text-align: left;
+  text-wrap: pretty;
 }
 
-.carte-liste s {
-  text-decoration: line-through;
-  text-decoration-color: var(--gold);
-  text-decoration-thickness: .12em;
-  color: var(--muted);
+.kicker {
+  text-wrap: balance;
 }
 
-.carte-etiquette {
-  --tilt: -6deg;
+/* Tablette : la photo de la une est haute. À droite, l'article puis les encadrés
+   (« Prendre rendez-vous », « En bref ») remplissent la hauteur, au lieu de laisser un vide. */
+@media (min-width: 46rem) and (max-width: 63.99rem) {
+  .lead:not(.lead--texte) .lead-photo {
+    grid-column: 1;
+    grid-row: 2 / span 2;
+  }
 
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
-  padding: .55em 1.1em .5em;
-  border: 2px solid var(--ink);
-  background: var(--white);
-  box-shadow: 0 1rem 1.8rem -1rem rgba(44, 32, 56, .6);
-  color: var(--ink);
-  font-family: var(--font-poster);
-  font-size: clamp(2rem, 7vw, 3.6rem);
-  line-height: 1;
-  text-transform: uppercase;
-  white-space: nowrap;
-  translate: -50% -50%;
-  rotate: var(--tilt);
+  .lead:not(.lead--texte) .lead-text {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .lead:not(.lead--texte) .lead-side {
+    grid-column: 2;
+    grid-row: 3;
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 0;
+  }
+
+  .lead:not(.lead--texte) .lead-index {
+    grid-row: 4;
+  }
+
+  .lead:not(.lead--texte) .lead-photo {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .lead:not(.lead--texte) .lead-photo .frame {
+    flex: 1;
+    aspect-ratio: auto;
+    min-height: 30rem;
+  }
 }
 
-/* Deux bouts de ruban adhésif aux coins */
-.carte-etiquette::before,
-.carte-etiquette::after {
-  content: "";
-  position: absolute;
-  top: -.55rem;
-  width: 3.6rem;
-  height: 1.2rem;
-  background: var(--tape);
-  box-shadow: 0 1px 2px rgba(44, 32, 56, .18);
+/* Téléphone : le bouton de la carte prend toute la largeur, sous le post-it centré. */
+@media (max-width: 39.99rem) {
+  .carte-action .btn {
+    width: 100%;
+  }
 }
 
-.carte-etiquette::before {
-  left: -1rem;
-  rotate: -28deg;
+/* Page « Prendre rendez-vous » : sur téléphone et tablette, l'affichette et l'encadré
+   « Le salon » sont centrés l'un sous l'autre, à la même largeur. */
+@media (max-width: 59.99rem) {
+  .rdv-page {
+    justify-items: center;
+  }
+
+  .rdv-page .flyer,
+  .rdv-page .how-box {
+    width: min(100%, 30rem);
+    max-width: none;
+  }
 }
 
-.carte-etiquette::after {
-  right: -1rem;
-  rotate: 24deg;
-}
+/* Téléphone : le tampon « Sur rendez-vous » de l'encadré « En bref » ne cache plus le texte. */
+@media (max-width: 45.99rem) {
+  .briefs-stamp {
+    top: -2.9rem;
+    right: -.3rem;
+    width: 4.4rem;
+  }
 
-.carte-action .btn {
-  width: auto;
-}
-
-@media (max-width: 30rem) {
-  .carte-etiquette {
-    white-space: normal;
-    width: 80%;
-    text-align: center;
+  .briefs-box {
+    margin-top: 1.4rem;
   }
 }

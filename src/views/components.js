@@ -105,14 +105,12 @@ function openBadge(status) {
  * (Chez Cyrille, chaque ligne porte ses prix ; ici, tout passe par le devis.)
  */
 function specialtiesTable(specialties, caption) {
-  // La carte est barrée d'un trait, et une étiquette est collée par-dessus : « Seulement par devis ».
+  // La carte, et un post-it collé à côté : « Mais seulement par devis ».
   return html`<div class="carte-devis">
-    <div class="carte-barree">
-      <ul class="carte-liste" aria-label="${caption}" data-stagger>
-        ${specialties.map(name => html`<li data-reveal><s>${name}</s></li>`)}
-      </ul>
-      <p class="carte-etiquette" data-reveal="stamp" data-delay="300">Seulement par devis</p>
-    </div>
+    <ul class="carte-liste" aria-label="${caption}" data-stagger>
+      ${specialties.map(name => html`<li data-reveal>${name}</li>`)}
+    </ul>
+    <p class="post-it" data-reveal="stamp" data-delay="300">Mais seulement <span>par devis</span></p>
     <p class="actions carte-action" data-reveal>${messageButton('Demander un devis')}</p>
   </div>`;
 }
