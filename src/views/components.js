@@ -115,6 +115,27 @@ function specialtiesTable(specialties, caption) {
   </div>`;
 }
 
+/**
+ * Les prochaines disponibilités, pour une retouche ou un petit tatouage : un encadré, jour par
+ * jour, avec les plages libres. Chaque jour ouvre la messagerie (le rendez-vous se prend par
+ * message, avec l'acompte, comme les autres).
+ */
+function availabilityBox(disponibilites, { id = 'dispos-titre' } = {}) {
+  return html`<section class="box dispos" aria-labelledby="${id}" data-reveal>
+    <h2 class="box-title" id="${id}">Prochaines disponibilités</h2>
+    <p class="dispos-pour">Pour une retouche ou un petit tatouage.</p>
+    ${disponibilites.length
+      ? html`<ul class="dispos-liste">${disponibilites.map(d => html`<li>
+          <button type="button" class="dispos-jour" data-ouvrir-chat data-date="${d.date}">
+            <span class="dispos-date">${capitalize(d.jour)}</span>
+            <span class="dispos-heures">${d.texte}</span>
+          </button>
+        </li>`)}</ul>`
+      : html`<p class="field-hint">Pas de disponibilité dans les prochaines semaines : écrivez quand même, une place peut se libérer.</p>`}
+    <p class="field-hint">Pour un projet plus grand, le créneau est fixé avec le devis. Un acompte est demandé pour chaque rendez-vous.</p>
+  </section>`;
+}
+
 /** Les annonces du calendrier (fermetures, ouvertures, horaires exceptionnels) en brèves. */
 function calendarNotices(annonces, { limit = 4 } = {}) {
   return annonces.slice(0, limit).map(a => html`<li class="${a.type === 'fermeture' ? 'briefs-alert' : 'briefs-note'}"><strong>${a.type === 'fermeture' ? 'Fermeture.' : 'À noter.'}</strong> ${capitalize(a.texte.replace(/^Fermé /, ''))}.</li>`);
@@ -206,6 +227,6 @@ function splitTitle(lines) {
 
 module.exports = {
   euros, capitalize, telHref, picture, ratioClass, PAGES, edition, folio, weekHours, hoursTable, openDaysSentence,
-  openStatusLabel, openBadge, specialtiesTable, calendarNotices, houseRules, appointmentSentence,
+  openStatusLabel, openBadge, specialtiesTable, availabilityBox, calendarNotices, houseRules, appointmentSentence,
   kicker, sectionBar, stamp, ticker, buttonLabel, button, messageButton, splitTitle,
 };

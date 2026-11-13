@@ -10,7 +10,7 @@ const { layout } = require('./layout');
 const { flashCard, appointmentFlyer } = require('./home');
 const {
   PAGES, folio, picture, button, buttonLabel, splitTitle, kicker, stamp, telHref, ratioClass,
-  houseRules, appointmentSentence, hoursTable, openBadge, specialtiesTable, calendarNotices,
+  houseRules, appointmentSentence, hoursTable, openBadge, specialtiesTable, calendarNotices, availabilityBox,
 } = require('./components');
 
 /** L'encadré « À noter » : fermetures et horaires exceptionnels à venir. */
@@ -132,6 +132,7 @@ function appointment(site) {
   })}
   <div class="container annonces rdv-page">
     ${appointmentFlyer(config)}
+    ${availabilityBox(site.disponibilites)}
 
     <div class="box how-box" data-reveal data-delay="120">
       <h2 class="box-title">Le salon</h2>

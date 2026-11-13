@@ -1452,3 +1452,77 @@ label.btn {
     margin-top: 1.4rem;
   }
 }
+
+/* ── Prochaines disponibilités (retouches, petits tatouages) ─────────── */
+
+.dispos {
+  align-self: start;
+  width: 100%;
+  max-width: 30rem;
+}
+
+.dispos-pour {
+  font-family: var(--font-head);
+  font-size: 1.25rem;
+  font-style: italic;
+  line-height: 1.25;
+}
+
+.dispos-liste {
+  border-top: 1px solid var(--ink);
+}
+
+.dispos-jour {
+  display: grid;
+  gap: .1rem;
+  width: 100%;
+  min-height: 3.2rem;
+  padding: .6rem .2rem;
+  border: 0;
+  border-bottom: 1px dotted var(--hair);
+  background: transparent;
+  text-align: left;
+  transition: background-color .2s ease;
+}
+
+@media (hover: hover) {
+  .dispos-jour:hover {
+    background: var(--marker);
+  }
+}
+
+.dispos-date {
+  font-family: var(--font-label);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.dispos-heures {
+  color: var(--gold);
+  font-family: var(--font-head);
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Page « Prendre rendez-vous » : sur grand écran, l'affichette et les disponibilités côte à côte,
+   l'encadré « Le salon » en dessous. */
+@media (min-width: 60rem) {
+  .rdv-page .how-box {
+    grid-column: 1 / -1;
+    justify-self: center;
+    max-width: 40rem;
+  }
+}
+
+@media (max-width: 59.99rem) {
+  .rdv-page .dispos {
+    width: min(100%, 30rem);
+  }
+
+  .annonces .dispos {
+    justify-self: center;
+  }
+}

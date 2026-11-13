@@ -327,6 +327,24 @@ test('fermetures, ouvertures et horaires exceptionnels ; jours fériés fermés 
   assert.strictEqual((await navigateur()('POST', '/api/sha/exceptions', { type: 'fermeture', du: demain })).status, 401);
 });
 
+test('prochaines disponibilités : les plages libres, moins les rendez-vous fixés', async () => {
+  const sha = await salon();
+  const jours = (html) => [...html.matchAll(/data-date="([\d-]+)">\s*<span class="dispos-date">[^<]*<\/span>\s*<span class="dispos-heures">([^<]*)<\/span>/g)].map((m) => ({ date: m[1], heures: m[2] }));
+  let dispos = jours((await page('/rendez-vous')).html);
+  assert.ok(dispos.length >= 3, 'plusieurs jours proposés');
+  assert.ok((await page('/')).html.includes('Prochaines disponibilités'));
+  const premier = dispos[0];
+  const debut = /^(\d{1,2})h(\d{2})?/.exec(premier.heures);
+  const hh = `${debut[1].padStart(2, '0')}:${debut[2] || '00'}`;
+  // Une retouche d'une heure au tout début de la première plage : la plage commence une heure plus tard.
+  const r = await sha('POST', '/api/sha/rendez-vous', { nom: 'Essai', titre: 'Retouche', debut: `${premier.date}T${hh}`, duree: 60 });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.corps));
+  dispos = jours((await page('/rendez-vous')).html);
+  const apres = dispos.find((d) => d.date === premier.date);
+  assert.ok(!apres || !apres.heures.startsWith(premier.heures.split(' – ')[0] + ' –'), `${premier.heures} → ${apres && apres.heures}`);
+  await sha('POST', `/api/sha/projets/${r.corps.id}/annuler`, {});
+});
+
 test('l’espace salon : galerie, horaires, photo de profil, refus des faux fichiers et des requêtes externes', async () => {
   const sha = await salon();
 

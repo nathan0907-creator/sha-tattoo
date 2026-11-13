@@ -135,6 +135,34 @@ function etatOuverture(semaine, now) {
   return { open: false };
 }
 
+/**
+ * Les prochaines disponibilités, pour une retouche ou un petit tatouage : les plages libres des
+ * prochains jours d'ouverture (horaires réels : exceptions et jours fériés compris), moins les
+ * rendez-vous déjà fixés ou proposés. À partir du lendemain ; seules les plages d'au moins
+ * 30 minutes comptent. Les grosses pièces, elles, ont leur créneau fixé avec le devis.
+ */
+function disponibilites(semaine, now, { jours = 5, horizon = 45, minimum = 30 } = {}) {
+  const occupes = db.projets.filter((p) => p.creneau && p.etape !== 'annule').map((p) => ({
+    date: p.creneau.debut.slice(0, 10),
+    start: toMinutes(p.creneau.debut.slice(11)),
+    end: toMinutes(p.creneau.debut.slice(11)) + p.creneau.duree,
+  }));
+  const liste = [];
+  for (let offset = 1; offset <= horizon && liste.length < jours; offset++) {
+    const date = addDays(now.date, offset);
+    let libres = horairesDu(date, semaine).plages.map((p) => ({ ...p }));
+    for (const o of occupes.filter((x) => x.date === date)) {
+      libres = libres.flatMap((l) => {
+        if (o.end <= l.start || o.start >= l.end) return [l];
+        return [{ start: l.start, end: o.start }, { start: o.end, end: l.end }].filter((x) => x.end > x.start);
+      });
+    }
+    libres = libres.filter((l) => l.end - l.start >= minimum);
+    if (libres.length) liste.push({ date, jour: jourLong(date), plages: libres, texte: plagesTexte(libres) });
+  }
+  return liste;
+}
+
 const frHeure = (min) => `${Math.floor(min / 60)}h${min % 60 ? String(min % 60).padStart(2, '0') : ''}`;
 const plagesTexte = (plages) => plages.map((p) => `${frHeure(p.start)} – ${frHeure(p.end)}`).join(' · ');
 const jourLong = (date) => {
@@ -483,6 +511,7 @@ function contexte(req, chemin) {
     now,
     status: etatOuverture(hours, now),
     annonces: annoncesCalendrier(hours, now.date),
+    disponibilites: disponibilites(hours, now),
     flashs: images.filter((g) => g.type === 'flash').map(decrireImage),
     client: client && {
       unread: db.projets.filter((p) => p.client === client.id).reduce((n, p) => n + (p.messages.length - p.vuClient), 0),

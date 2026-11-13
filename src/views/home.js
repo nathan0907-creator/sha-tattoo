@@ -6,7 +6,7 @@ const { layout } = require('./layout');
 const {
   PAGES, picture, button, messageButton, splitTitle, kicker, sectionBar, stamp, ticker, edition, capitalize,
   ratioClass, houseRules, appointmentSentence, euros, openBadge, hoursTable, openDaysSentence, specialtiesTable,
-  calendarNotices,
+  calendarNotices, availabilityBox,
 } = require('./components');
 
 const { addDays: addDaysISO } = require('../time');
@@ -141,8 +141,9 @@ function home(site) {
 
   <section class="container section" aria-labelledby="annonces-titre">
     ${sectionBar('annonces-titre', 'Prendre rendez-vous', pageOf('/rendez-vous'))}
-    <div class="annonces annonces--seule">
+    <div class="annonces">
       ${appointmentFlyer(config)}
+      ${availabilityBox(site.disponibilites, { id: 'dispos-une' })}
     </div>
   </section>
 
