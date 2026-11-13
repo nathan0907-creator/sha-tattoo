@@ -1,0 +1,4 @@
+node_modules/
+# Comptes, messages, photos des clients et de la galerie, codes d'accès : jamais publiés.
+data/
+.claude/
