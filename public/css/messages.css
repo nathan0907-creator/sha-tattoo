@@ -1,0 +1,1422 @@
+/* ==========================================================================
+   Sha Tattoo — ce qui s'ajoute à la gazette reprise de L'atelier de Cyrille :
+   la photo de profil en médaillon, l'affichette « par message », les flashs,
+   la messagerie (assistant, aperçu, devis, acompte) et les avis.
+   Mêmes jetons que base.css (--paper, --ink, --gold…), mêmes quatre familles.
+   ========================================================================== */
+
+/* ── La photo de profil : un médaillon rond cerclé d'un dégradé violet ──── */
+
+.brand-avatar,
+.chat-avatar {
+  flex: none;
+  padding: 3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e2b4ea 0%, var(--gold-bright) 28%, var(--gold) 62%, var(--ink) 100%);
+  object-fit: cover;
+}
+
+.chat-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+/* Sans photo : l'initiale du salon, en écriture, sur le même dégradé */
+.avatar-lettre {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  color: #fff;
+  font-family: var(--font-name);
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+/* ── L'intro : la machine à tatouer trace la ligne (chez Cyrille, des ciseaux la coupent) ── */
+
+.intro-cut .icon {
+  top: -2.2rem; /* l'aiguille, en bas de l'icône, touche la ligne */
+  stroke-width: 1.4;
+}
+
+/* ── La une ──────────────────────────────────────────────────────────── */
+
+.masthead-ear-slot {
+  font-family: var(--font-head);
+  font-size: 1.3rem;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+/* Tant qu'aucune photo n'est publiée, l'article de tête prend la place de la photo. */
+@media (min-width: 46rem) {
+  .lead--texte .lead-text {
+    grid-column: 1 / -1;
+  }
+
+  .lead--texte .lead-text .columns {
+    columns: 2 15rem;
+    font-size: 1.2rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  .lead--texte .lead-text {
+    grid-column: 1 / 3;
+    padding-left: 0;
+  }
+}
+
+/* ── Prendre rendez-vous : l'affichette « par message » ──────────────── */
+
+.flyer--message {
+  gap: 1rem;
+  padding-bottom: 1.6rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+/* La phrase de la prise de rendez-vous : « devis » en gras et en italique, passé au surligneur. */
+.flyer-phrase {
+  max-width: none;
+  font-family: var(--font-head);
+  font-size: clamp(1.35rem, 3.6vw, 1.6rem);
+  line-height: 1.3;
+}
+
+.flyer-phrase strong em,
+.ours-phrase strong em {
+  padding-inline: .12em;
+  background: linear-gradient(transparent 58%, var(--marker) 58%);
+}
+
+.ours-phrase strong em {
+  background: none;
+  color: var(--accent-text);
+}
+
+/* La pastille « Mes messages » ne doit pas cacher les derniers liens du pied de page. */
+body:has(.chat-bulle) .ours-bottom {
+  padding-bottom: 4.75rem;
+}
+
+.flyer--message .rules {
+  margin: 0;
+}
+
+.flyer--message .btn {
+  width: 100%;
+}
+
+@media (min-width: 60rem) {
+  .annonces--seule {
+    grid-template-columns: minmax(0, 30rem);
+    justify-content: center;
+  }
+}
+
+.annonces--seule .flyer {
+  width: min(100%, 30rem);
+}
+
+.rdv-page {
+  padding-bottom: clamp(2rem, 5vw, 3.5rem);
+}
+
+.rdv-page .how-box .btn {
+  width: 100%;
+}
+
+/* ── La carte : les flashs ───────────────────────────────────────────── */
+
+.flash-intro {
+  max-width: 46rem;
+  margin: .7rem 0 1.6rem;
+  font-size: 1.15rem;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Rubrique encore vide : on annonce la suite, sans rien inventer. */
+.a-paraitre {
+  padding: 1.4rem 1.2rem;
+  border: 1px dashed var(--ink);
+  background: var(--white);
+  font-size: 1.1rem;
+  font-style: italic;
+  text-align: center;
+}
+
+.a-paraitre strong {
+  display: block;
+  margin-bottom: .2rem;
+  color: var(--gold);
+  font-family: var(--font-label);
+  font-size: .95rem;
+  font-style: normal;
+  letter-spacing: .065em;
+  text-transform: uppercase;
+}
+
+.flash-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14.5rem), 1fr));
+  gap: 2.4rem 1.6rem;
+  padding-top: .9rem;
+}
+
+/* Une planche, scotchée comme une petite annonce */
+.flash-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ink);
+  background: var(--white);
+  box-shadow: 0 1.2rem 1.8rem -1.5rem rgba(44, 32, 56, .55);
+  transition: translate .5s var(--ease-expo), box-shadow .5s var(--ease-expo);
+}
+
+.flash-card::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: -.75rem;
+  left: 50%;
+  width: 5.5rem;
+  height: 1.5rem;
+  margin-left: -2.75rem;
+  background: var(--tape);
+  box-shadow: 0 1px 2px rgba(44, 32, 56, .18);
+  rotate: 2deg;
+}
+
+.flash-card:nth-child(even)::before {
+  rotate: -3deg;
+}
+
+@media (hover: hover) {
+  .flash-card:hover {
+    translate: 0 -4px;
+    box-shadow: 0 1.8rem 2.2rem -1.6rem rgba(44, 32, 56, .6);
+  }
+}
+
+.flash-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--ink);
+  background: #fff;
+  aspect-ratio: 4 / 5;
+  cursor: zoom-in;
+}
+
+/* Un dessin ne se rogne pas : la planche entière tient dans son cadre. */
+.flash-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.flash-foot {
+  display: grid;
+  justify-items: start;
+  gap: .5rem;
+  padding: .9rem 1rem 1rem;
+}
+
+.flash-name {
+  font-family: var(--font-poster);
+  font-size: 1.9rem;
+  font-weight: 400;
+  letter-spacing: .01em;
+  line-height: .95;
+  text-transform: uppercase;
+}
+
+.flash-price {
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.flash-price b {
+  color: var(--gold);
+  font-size: 1.1em;
+}
+
+.flash-card.is-taken .flash-frame img {
+  filter: grayscale(1) opacity(.4);
+}
+
+.flash-taken {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: .35rem .8rem;
+  border: 3px double var(--gold);
+  background: rgba(251, 250, 248, .88);
+  color: var(--gold);
+  font-family: var(--font-poster);
+  font-size: 1.8rem;
+  letter-spacing: .03em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translate(-50%, -50%) rotate(-12deg);
+}
+
+.help-band button.link {
+  font: inherit;
+}
+
+/* ── Petits outils communs à la messagerie et à l'espace salon ───────── */
+
+.btn-plein {
+  width: 100%;
+}
+
+label.btn {
+  cursor: pointer;
+}
+
+.btn-paypal {
+  --bg: #ffc439;
+  --bd: var(--ink);
+  --fg: #111;
+  --hover-bg: var(--ink);
+  --hover-fg: #ffc439;
+}
+
+/* Bouton occupé : le libellé laisse la place à un tour de roue */
+.btn.occupe,
+.lien-action.occupe {
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn.occupe::after,
+.lien-action.occupe::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: auto;
+  border: 2px solid var(--fg, var(--ink));
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+.lien-action {
+  position: relative;
+  justify-self: start;
+  min-height: 2.75rem;
+  padding: 0 .9rem;
+  border: 1px solid var(--ink);
+  background: transparent;
+  font-family: var(--font-label);
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+.lien-action.occupe::after {
+  border-color: var(--ink);
+  border-right-color: transparent;
+}
+
+@media (hover: hover) {
+  .lien-action:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+}
+
+.lien-discret {
+  align-self: center;
+  min-height: 2.75rem;
+  padding: 0 .5rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: .95rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-decoration: underline;
+  text-decoration-color: var(--gold);
+  text-underline-offset: .22em;
+}
+
+@media (hover: hover) {
+  .lien-discret:hover {
+    color: var(--ink);
+  }
+}
+
+.formulaire {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.field-error:empty {
+  display: none;
+}
+
+.deux {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: .9rem;
+}
+
+@media (max-width: 24rem) {
+  .deux {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.case {
+  display: flex;
+  align-items: flex-start;
+  gap: .7rem;
+  font-size: 1.02rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.case input {
+  flex: none;
+  width: 1.3rem;
+  height: 1.3rem;
+  margin: .1rem 0 0;
+  accent-color: var(--gold);
+}
+
+.chargement {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: 1rem 0;
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.onglets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--ink);
+}
+
+.onglets button {
+  min-height: 2.9rem;
+  padding: .3rem .5rem;
+  border: 0;
+  background: var(--white);
+  font-family: var(--font-label);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.onglets button + button {
+  border-left: 1px solid var(--ink);
+}
+
+.onglets button[aria-selected="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  padding: .1rem .55rem;
+  border: 1px solid var(--ink);
+  background: var(--white);
+  font-family: var(--font-label);
+  font-size: .86rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.badge-devis,
+.badge-creneau {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.badge-devis_accepte,
+.badge-acompte_declare {
+  background: var(--marker);
+}
+
+.badge-confirme {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.badge-annule {
+  border-color: var(--hair);
+  color: var(--muted);
+}
+
+.pastille {
+  position: absolute;
+  top: .9rem;
+  right: .4rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 .4rem;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #fff;
+  font-family: var(--font-label);
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+/* ── La messagerie ───────────────────────────────────────────────────── */
+
+/* Pastille « Mes messages » : pour qui a déjà un compte ouvert */
+.chat-bulle {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+  min-height: 3.1rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--ink);
+  background: var(--white);
+  box-shadow: 4px 4px 0 var(--ink);
+  font-family: var(--font-label);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  transition: translate .3s var(--ease-expo), box-shadow .3s var(--ease-expo);
+}
+
+.chat-bulle .icon {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.chat-bulle-nb {
+  display: grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 .35rem;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #fff;
+  font-size: .9rem;
+}
+
+@media (hover: hover) {
+  .chat-bulle:hover {
+    translate: -2px -2px;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+}
+
+/* Sur téléphone, la barre « Rendez-vous » occupe le bas de l'écran : la pastille passe au-dessus. */
+@media (max-width: 46rem) {
+  .chat-bulle {
+    bottom: 5.2rem;
+  }
+
+  .chat-bulle span {
+    display: none;
+  }
+}
+
+.chat-ouvert,
+.chat-ouvert body {
+  overflow: hidden;
+}
+
+.chat-ouvert .chat-bulle {
+  visibility: hidden;
+}
+
+.chat-fond {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: rgba(44, 32, 56, .5);
+}
+
+.chat {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  width: min(29rem, 100vw);
+  border-left: 1px solid var(--ink);
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  box-shadow: -1.5rem 0 3rem -1.5rem rgba(44, 32, 56, .5);
+  transform: translateX(100%);
+  transition: transform .38s var(--ease-expo);
+}
+
+.chat.ouvert {
+  transform: none;
+}
+
+.chat-tete {
+  --edge: var(--paper);
+
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem .7rem .6rem 1rem;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.chat-tete .icon-btn:not(:disabled):hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.chat-qui {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: .7rem;
+  min-width: 0;
+}
+
+.chat-qui > div {
+  min-width: 0;
+}
+
+.chat-titre {
+  overflow: hidden;
+  font-family: var(--font-label);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chat-sous {
+  color: var(--gold-bright);
+  font-family: var(--font-label);
+  font-size: .92rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.chat-corps {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.2rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.chat-corps.mode-conversation {
+  gap: 0;
+  padding: 0;
+}
+
+/* Sur un petit téléphone, un long libellé de bouton passe à la ligne plutôt que de déborder. */
+.chat-corps .btn {
+  white-space: normal;
+  text-align: center;
+}
+
+.chat-intro {
+  display: grid;
+  gap: .4rem;
+  padding-bottom: .9rem;
+  border-bottom: 4px solid var(--ink);
+}
+
+.chat-intro-titre {
+  font-family: var(--font-poster);
+  font-size: 2.6rem;
+  line-height: .92;
+  text-transform: uppercase;
+}
+
+.chat-intro p + p {
+  color: var(--muted);
+  font-size: 1.08rem;
+  line-height: 1.35;
+}
+
+.chat-vide {
+  display: grid;
+  justify-items: start;
+  gap: .9rem;
+}
+
+/* Mes demandes */
+.projets {
+  display: grid;
+  border-top: 4px solid var(--ink);
+}
+
+.projet-ligne {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: .4rem;
+  width: 100%;
+  padding: .9rem 2.8rem .9rem .2rem;
+  border: 0;
+  border-bottom: 1px solid var(--ink);
+  background: transparent;
+  text-align: left;
+  transition: background-color .2s ease;
+}
+
+@media (hover: hover) {
+  .projet-ligne:hover {
+    background: var(--marker);
+  }
+}
+
+.projet-titre {
+  font-family: var(--font-head);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.projet-date {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  color: var(--muted);
+  font-size: 1rem;
+  font-style: italic;
+}
+
+/* La conversation */
+.conversation {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1rem .7rem;
+}
+
+.progression {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.progression li {
+  padding-top: .4rem;
+  border-top: 4px solid var(--paper-2);
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: .86rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.progression li.fait {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.progression li.actuel {
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.fil {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.msg {
+  display: grid;
+  gap: .25rem;
+  max-width: 88%;
+}
+
+.msg p {
+  font-size: 1.08rem;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.msg time {
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: .82rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+}
+
+.msg-moi {
+  align-self: flex-end;
+  justify-items: end;
+}
+
+.msg-moi p {
+  padding: .6rem .85rem;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.msg-elle {
+  align-self: flex-start;
+  justify-items: start;
+}
+
+.msg-elle p {
+  padding: .6rem .85rem;
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.msg-systeme {
+  align-self: center;
+  max-width: 94%;
+  text-align: center;
+}
+
+.msg-systeme p {
+  padding: .35rem .3rem;
+  border-block: 1px dotted var(--hair);
+  color: var(--muted);
+  font-size: 1rem;
+  font-style: italic;
+}
+
+.msg-image {
+  display: block;
+  max-width: min(15rem, 100%);
+  padding: 0;
+  border: 1px solid var(--ink);
+  background: #fff;
+  line-height: 0;
+  cursor: zoom-in;
+}
+
+.msg-image img {
+  width: 100%;
+  max-height: 17rem;
+  object-fit: cover;
+}
+
+/* L'assistant : il parle en son nom, et ses propositions occupent toute la largeur */
+.msg-auteur {
+  color: var(--gold);
+  font-family: var(--font-label);
+  font-size: .86rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.msg-bot + .msg-bot .msg-auteur {
+  display: none;
+}
+
+.msg-action {
+  display: grid;
+  gap: .5rem;
+  justify-items: stretch;
+}
+
+.msg-action .lien-discret {
+  justify-self: center;
+}
+
+.fil-assistant .msg,
+.fil-assistant .msg-action {
+  animation: fade-up .5s var(--ease-out) both;
+}
+
+/* L'aperçu : le motif posé sur la photo */
+.apercu {
+  display: grid;
+  gap: .8rem;
+}
+
+.apercu-cadre {
+  display: grid;
+  place-items: center;
+  background: var(--paper-2);
+}
+
+.apercu-toile {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 58vh;
+  cursor: grab;
+  touch-action: none; /* le doigt déplace le motif, pas la page */
+}
+
+.apercu-toile.saisi {
+  cursor: grabbing;
+}
+
+.apercu-toile:focus-visible {
+  outline-offset: -3px;
+}
+
+.apercu-reglages {
+  display: grid;
+  gap: .55rem;
+  padding: .8rem .9rem .9rem;
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.apercu-reglage {
+  display: grid;
+  grid-template-columns: 3.6rem minmax(0, 1fr) 3.2rem;
+  align-items: center;
+  gap: .6rem;
+  min-height: 2.75rem;
+}
+
+.apercu-reglage label {
+  font-family: var(--font-label);
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.apercu-reglage input {
+  width: 100%;
+  height: 2rem;
+  accent-color: var(--gold);
+}
+
+.apercu-reglage output {
+  font-family: var(--font-label);
+  font-size: .95rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+
+.apercu-reglages .btn {
+  justify-self: start;
+}
+
+/* Les encadrés d'étape : devis, créneau, acompte, confirmation */
+.zone-action:empty {
+  display: none;
+}
+
+.carte {
+  display: grid;
+  gap: .8rem;
+  padding: 1rem 1.1rem 1.15rem;
+  border: 1px solid var(--ink);
+  background: var(--white);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.carte-devis,
+.carte-creneau {
+  border-top: 4px solid var(--gold);
+}
+
+.carte-ok {
+  border-top: 4px solid var(--ok);
+}
+
+.carte-ok .box-title {
+  color: var(--ok);
+}
+
+.carte-lieu,
+.creneau-date {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+}
+
+.carte-lieu .icon,
+.creneau-date .icon {
+  margin-top: .15em;
+}
+
+.devis-lignes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--ink);
+}
+
+.devis-lignes div {
+  padding: .5rem .6rem .45rem;
+}
+
+.devis-lignes div + div {
+  border-left: 1px solid var(--ink);
+}
+
+.devis-lignes dt {
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: .86rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.devis-lignes dd {
+  font-family: var(--font-poster);
+  font-size: 2.1rem;
+  line-height: 1;
+}
+
+.devis-details {
+  color: var(--muted);
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.creneau-date {
+  font-family: var(--font-head);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.acompte-titre {
+  padding-top: .7rem;
+  border-top: 1px dotted var(--hair);
+  color: var(--gold);
+  font-family: var(--font-label);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.paiement {
+  display: grid;
+  gap: .55rem;
+  padding: .8rem .9rem .9rem;
+  border: 1px dashed var(--ink);
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.paiement-nom {
+  font-family: var(--font-poster);
+  font-size: 1.7rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* La saisie d'un message, collée en bas du panneau */
+.saisie {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: .5rem;
+  padding: .7rem .8rem calc(.7rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.saisie-ligne {
+  display: flex;
+  align-items: flex-end;
+  gap: .4rem;
+}
+
+.saisie label.icon-btn {
+  cursor: pointer;
+}
+
+.saisie textarea {
+  flex: 1;
+  min-height: 2.75rem;
+  max-height: 9rem;
+  padding: .55rem .7rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--white);
+  font-size: 1.08rem;
+  line-height: 1.35;
+  resize: none;
+}
+
+.saisie textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--marker), 0 0 0 4px var(--ink);
+}
+
+.envoyer {
+  border-color: var(--gold-bright);
+  background: var(--gold-bright);
+}
+
+.pj-apercu {
+  position: relative;
+  width: 4.75rem;
+}
+
+.pj-apercu img {
+  width: 4.75rem;
+  height: 4.75rem;
+  border: 1px solid var(--ink);
+  object-fit: cover;
+}
+
+.pj-retirer {
+  position: absolute;
+  top: -.9rem;
+  right: -1.6rem;
+  background: var(--white);
+}
+
+/* ── Une image en grand ──────────────────────────────────────────────── */
+
+.visionneuse {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  display: grid;
+  place-items: center;
+  padding: 4rem 1rem 1rem;
+  background: rgba(44, 32, 56, .94);
+  cursor: zoom-out;
+}
+
+.visionneuse img {
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid var(--paper);
+  background: #fff;
+  object-fit: contain;
+  cursor: default;
+}
+
+.visionneuse .icon-btn {
+  --edge: var(--paper);
+
+  position: absolute;
+  top: .7rem;
+  right: .7rem;
+  color: var(--paper);
+}
+
+.visionneuse .icon-btn:not(:disabled):hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* ── Avis : un message bref, en bas de l'écran ───────────────────────── */
+
+.avis {
+  position: fixed;
+  bottom: 1.1rem;
+  left: 50%;
+  z-index: 180;
+  display: grid;
+  gap: .5rem;
+  width: min(27rem, calc(100vw - 2rem));
+  pointer-events: none;
+  translate: -50% 0;
+}
+
+.avis-item {
+  padding: .8rem 1rem;
+  border-left: 4px solid var(--danger);
+  background: var(--ink);
+  box-shadow: 0 1rem 2rem -1rem rgba(44, 32, 56, .7);
+  color: var(--paper);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
+  animation: fade-up .4s var(--ease-out) both;
+  transition: opacity .5s ease;
+}
+
+.avis-info {
+  border-left-color: var(--gold-bright);
+}
+
+.avis-item.part {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat {
+    transition: none;
+  }
+}
+
+/* ── La carte : les spécialités, et une seule option, le devis ───────── */
+
+.carte-devis {
+  display: grid;
+  gap: 1.6rem;
+}
+
+@media (min-width: 52rem) {
+  .carte-devis {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.carte-liste {
+  border-top: 1px solid var(--ink);
+}
+
+.carte-liste li {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  padding: .8rem .1rem;
+  border-bottom: 1px solid var(--hair);
+  font-family: var(--font-head);
+  font-size: clamp(1.15rem, 2.6vw, 1.6rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.carte-liste li::before {
+  content: "";
+  flex: none;
+  width: .55rem;
+  height: .55rem;
+  background: var(--gold);
+  translate: 0 -.15em;
+}
+
+.carte-option {
+  position: relative;
+  display: grid;
+  gap: .8rem;
+  padding: 1.6rem 1.4rem 1.4rem;
+  border: 1px solid var(--ink);
+  background: var(--white);
+  box-shadow: 0 1.4rem 2.2rem -1.6rem rgba(44, 32, 56, .55);
+}
+
+.carte-option::before {
+  content: "";
+  position: absolute;
+  top: -.75rem;
+  left: 50%;
+  width: 5.5rem;
+  height: 1.5rem;
+  margin-left: -2.75rem;
+  background: var(--tape);
+  rotate: -2deg;
+}
+
+.carte-option-titre {
+  font-family: var(--font-poster);
+  font-size: clamp(2.2rem, 5vw, 3rem);
+  line-height: .95;
+  text-transform: uppercase;
+}
+
+.carte-option-titre span {
+  color: var(--gold-display);
+  font-family: var(--font-name);
+  text-transform: none;
+}
+
+.carte-option-texte {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.carte-option .btn {
+  width: 100%;
+}
+
+/* Les annonces du calendrier (« À noter ») */
+.briefs li.briefs-note {
+  margin-inline: -.5rem;
+  padding: .55rem .5rem;
+  border-bottom: 0;
+  background: var(--paper-2);
+}
+
+.briefs li.briefs-alert + li,
+.briefs li.briefs-note + li {
+  padding-top: .6rem;
+}
+
+.carnet-annonces {
+  margin-top: 1rem;
+  justify-self: stretch;
+}
+
+/* ── Nouvelle demande : photo de référence, endroit, taille ──────────── */
+
+.field-label {
+  font-family: var(--font-label);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.ref-apercu {
+  justify-self: start;
+  max-width: 12rem;
+  border: 1px solid var(--ink);
+  background: #fff;
+  line-height: 0;
+}
+
+.ref-apercu img {
+  width: 100%;
+  max-height: 14rem;
+  object-fit: contain;
+}
+
+.nouvelle-demande .field {
+  gap: .45rem;
+}
+
+/* Côté salon : l'encadré « Le projet » */
+.projet-infos {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .35rem .9rem;
+}
+
+.projet-infos dt {
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: .9rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.projet-infos dd {
+  font-weight: 700;
+}
+
+/* ── La carte barrée, avec l'étiquette « Seulement par devis » collée par-dessus ── */
+
+.carte-devis {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.carte-barree {
+  position: relative;
+}
+
+.carte-liste s {
+  text-decoration: line-through;
+  text-decoration-color: var(--gold);
+  text-decoration-thickness: .12em;
+  color: var(--muted);
+}
+
+.carte-etiquette {
+  --tilt: -6deg;
+
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  padding: .55em 1.1em .5em;
+  border: 2px solid var(--ink);
+  background: var(--white);
+  box-shadow: 0 1rem 1.8rem -1rem rgba(44, 32, 56, .6);
+  color: var(--ink);
+  font-family: var(--font-poster);
+  font-size: clamp(2rem, 7vw, 3.6rem);
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  translate: -50% -50%;
+  rotate: var(--tilt);
+}
+
+/* Deux bouts de ruban adhésif aux coins */
+.carte-etiquette::before,
+.carte-etiquette::after {
+  content: "";
+  position: absolute;
+  top: -.55rem;
+  width: 3.6rem;
+  height: 1.2rem;
+  background: var(--tape);
+  box-shadow: 0 1px 2px rgba(44, 32, 56, .18);
+}
+
+.carte-etiquette::before {
+  left: -1rem;
+  rotate: -28deg;
+}
+
+.carte-etiquette::after {
+  right: -1rem;
+  rotate: 24deg;
+}
+
+.carte-action .btn {
+  width: auto;
+}
+
+@media (max-width: 30rem) {
+  .carte-etiquette {
+    white-space: normal;
+    width: 80%;
+    text-align: center;
+  }
+}

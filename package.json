@@ -1,0 +1,16 @@
+{
+  "name": "sha-tattoo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Site de Sha Tattoo : la gazette de L'atelier de Cyrille adaptee au tatouage (devis et rendez-vous par message, assistant photo, acompte, espace salon)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "open": "node server.js --open",
+    "test": "node --test \"test/*.test.js\"",
+    "reinitialiser-acces": "node scripts/mot-de-passe.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

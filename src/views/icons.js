@@ -1,0 +1,65 @@
+'use strict';
+
+const { html, raw } = require('./html');
+
+// Icônes au trait, grille 24 × 24. Le style (épaisseur, couleur) vient de la classe .icon.
+const PATHS = {
+  'arrow-right': '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  'arrow-up-right': '<path d="M7 17 17 7M8 7h9v9"/>',
+  'chevron-left': '<path d="m15 6-6 6 6 6"/>',
+  'chevron-right': '<path d="m9 6 6 6-6 6"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  pin: '<path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  phone: '<path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5C10.6 20 4 13.4 3.5 5.6A1.5 1.5 0 0 1 5 4z"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
+  card: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/>',
+  scissors: '<circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8.2 8.3 20 18M8.2 15.7 20 6"/>',
+  user: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>',
+  users: '<circle cx="9" cy="8.5" r="3.2"/><path d="M2.8 19.5c.7-3.2 3.1-4.9 6.2-4.9s5.5 1.7 6.2 4.9M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.6 14.9c1.9.6 3.1 2.1 3.6 4.6"/>',
+  star: '<path d="m12 3.6 2.55 5.2 5.7.82-4.12 4.03.97 5.68L12 16.65l-5.1 2.68.97-5.68L3.75 9.62l5.7-.82z"/>',
+  bold: '<path d="M7 4.5h6a3.6 3.6 0 0 1 0 7.2H7zM7 11.7h7a3.9 3.9 0 0 1 0 7.8H7z"/>',
+  italic: '<path d="M10 4.5h8M6 19.5h8M14.5 4.5l-5 15"/>',
+  pen: '<path d="M4 20l1.2-4.6L15.6 5a2.1 2.1 0 0 1 3 3L8.2 18.4z"/><path d="M13.8 6.8l3 3"/>',
+  bell: '<path d="M6 16v-5a6 6 0 1 1 12 0v5l1.5 2h-15L6 16zM10 20.5a2 2 0 0 0 4 0"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+  logout: '<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/>',
+  trash: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>',
+  ban: '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+  download: '<path d="M12 4v11M7.5 11l4.5 4.5 4.5-4.5M5 20h14"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  instagram: '<rect x="4" y="4" width="16" height="16" rx="4.5"/><circle cx="12" cy="12" r="3.6"/><path d="M16.8 7.2h.01"/>',
+  list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  tag: '<path d="M3.5 12.2V5A1.5 1.5 0 0 1 5 3.5h7.2l8.3 8.3-8.7 8.7-8.3-8.3z"/><path d="M8 8h.01"/>',
+  image: '<rect x="3" y="4.5" width="18" height="15" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="m4 17.5 5-5 4 4 2.5-2.5 4.5 4.5"/>',
+  'chevron-up': '<path d="m6 15 6-6 6 6"/>',
+  'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+  move: '<path d="M4 12h16M15 7l5 5-5 5M9 7l-5 5 5 5"/>',
+  // Ajouts pour Sha Tattoo : la messagerie et l'intro.
+  'arrow-left': '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  send: '<path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z"/>',
+  chat: '<path d="M20.5 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 20.5 12z"/>',
+  upload: '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 20h14"/>',
+  rotate: '<path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v4.5h-4.5"/>',
+  // La machine à tatouer, aiguille en bas à gauche : elle trace la ligne de l'intro.
+  machine: '<path d="M15 3h4a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 19 9h-4zM15 4H8a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h7M7 9l-2 6h4l1-6M5 15l.5 4h3l.5-4M7 19v4M19 9v3M17 9v2"/>',
+};
+
+/** Planche d'icônes, incluse une fois par page ; chaque icône s'utilise ensuite par <use>. */
+const sprite = raw(
+  `<svg class="sprite" aria-hidden="true" focusable="false">${Object.entries(PATHS)
+    .map(([name, paths]) => `<symbol id="i-${name}" viewBox="0 0 24 24">${paths}</symbol>`)
+    .join('')}</svg>`,
+);
+
+function icon(name, className = '') {
+  if (!PATHS[name]) throw new Error(`Icône inconnue : ${name}`);
+  return html`<svg class="icon ${className}" aria-hidden="true" focusable="false"><use href="#i-${name}"/></svg>`;
+}
+
+module.exports = { icon, sprite };
