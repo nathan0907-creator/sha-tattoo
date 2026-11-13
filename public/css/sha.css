@@ -939,3 +939,16 @@
 select option:disabled {
   color: #9a93a3;
 }
+
+/* Démo (GitHub Pages) : le bandeau qui rappelle que rien n'est enregistré */
+.demo-bandeau {
+  position: relative;
+  z-index: 30;
+  margin: 0;
+  padding: .55rem var(--gutter);
+  background: var(--gold-bright);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.35;
+  text-align: center;
+}

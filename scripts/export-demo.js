@@ -30,15 +30,15 @@ console.log = () => {};
 const { gerer } = require(path.join(racine, 'server.js'));
 console.log = log;
 
-const PAGES = ['/', '/prestations', '/galerie', '/rendez-vous', '/nous-trouver', '/mentions-legales', '/confidentialite', '/conditions'];
+const PAGES = ['/', '/prestations', '/galerie', '/rendez-vous', '/nous-trouver', '/mentions-legales', '/confidentialite', '/conditions', '/salon'];
 
 /** Les adresses du site (« /prestations », « /img/une.webp ») deviennent celles de la démo (« /sha-tattoo/… »). */
 function adapter(html) {
   return html
     .replace(/(\s(?:href|src|action|data-src|data-full|data-zoom|srcset)=")\/(?!\/)/g, `$1${base}/`)
     .replace('<html lang="fr">', '<html lang="fr" data-demo="1">')
-    // L'espace salon n'existe pas dans la démo.
-    .replace(/<li><a href="[^"]*\/salon" rel="nofollow">La rédaction<\/a><\/li>/, '');
+    // L'espace salon fonctionne avec un faux serveur d'exemple, chargé juste après les outils communs.
+    .replace(/(<script src="[^"]*\/js\/commun\.js" defer><\/script>)(\s*<script src="[^"]*\/js\/sha\.js")/, `$1\n<script src="${base}/js/demo-salon.js" defer></script>$2`);
 }
 
 function copier(de, vers) {
