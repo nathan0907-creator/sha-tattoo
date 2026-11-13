@@ -926,3 +926,16 @@
   color: var(--muted);
   font-size: .95em;
 }
+
+/* Le choix du créneau : les heures déjà prises sont grisées dans la liste. */
+.box-title--sous {
+  margin-top: .3rem;
+}
+
+.creneau-note {
+  grid-column: 1 / -1;
+}
+
+select option:disabled {
+  color: #9a93a3;
+}

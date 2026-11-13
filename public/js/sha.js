@@ -239,6 +239,54 @@
     return s;
   }
 
+  const RAISONS = {
+    devis: 'déjà proposé à une autre personne · devis pas encore accepté',
+    creneau: 'déjà proposé à une autre personne · acompte toujours pas payé',
+    acompte_declare: 'déjà proposé · acompte en vérification',
+    confirme: 'déjà réservé',
+  };
+
+  /**
+   * Le choix du créneau : une date, puis une heure dans une liste (tous les quarts d'heure).
+   * Les heures qui chevauchent un autre rendez-vous sont grisées, avec la raison.
+   * (Le champ « date et heure » du navigateur refusait certaines heures valides.)
+   */
+  function choixCreneau(p, { debut = '', selectDuree: duree, requis = false, prefixe = 'f' }) {
+    const cache = el('input', { type: 'hidden', name: 'debut', value: debut });
+    const jour = el('input', { type: 'date', id: prefixe + '-jour', min: maintenantLocal().slice(0, 10), value: debut.slice(0, 10), required: requis });
+    const heure = el('select', { id: prefixe + '-heure', required: requis });
+    const note = el('p', { class: 'field-hint creneau-note' });
+    const autres = etat.projets.filter((x) => x.id !== p.id && x.creneau && x.etape !== 'annule');
+    const minutes = (hhmm) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+
+    function remplir() {
+      const d = jour.value;
+      const longueur = Number(duree.value) || 60;
+      const choisie = heure.value || debut.slice(11, 16);
+      heure.replaceChildren(el('option', { value: '' }, d ? 'Choisir l’heure' : 'Choisir d’abord la date'));
+      const pris = autres.filter((x) => x.creneau.debut.slice(0, 10) === d);
+      for (let m = 8 * 60; m <= 20 * 60; m += 15) {
+        const hh = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+        const conflit = pris.find((x) => { const s = minutes(x.creneau.debut.slice(11)); return s < m + longueur && m < s + x.creneau.duree; });
+        heure.append(el('option', { value: hh, disabled: Boolean(conflit), selected: hh === choisie && !conflit },
+          hh.replace(':', 'h') + (conflit ? ` — ${RAISONS[conflit.etape] || 'déjà pris'} (${conflit.client})` : '')));
+      }
+      heure.disabled = !d;
+      note.textContent = pris.length ? `Ce jour-là : ${pris.map((x) => `${x.creneau.debut.slice(11).replace(':', 'h')} ${x.client} (${RAISONS[x.etape] || 'pris'})`).join(' · ')}` : (d ? 'Aucun autre rendez-vous ce jour-là.' : '');
+      majCache();
+    }
+    function majCache() { cache.value = jour.value && heure.value ? `${jour.value}T${heure.value}` : ''; }
+    jour.addEventListener('change', remplir);
+    duree.addEventListener('change', remplir);
+    heure.addEventListener('change', majCache);
+    remplir();
+
+    return el('div', { class: 'deux' },
+      el('div', { class: 'field' }, el('label', { for: prefixe + '-jour' }, requis ? 'Date' : 'Date (facultatif)'), jour),
+      el('div', { class: 'field' }, el('label', { for: prefixe + '-heure' }, 'Heure'), heure, cache),
+      note);
+  }
+
   function outils(p, rendre) {
     const c = p.client || {};
     const blocs = [];
@@ -281,15 +329,18 @@
       return blocs;
     }
 
-    // Le devis
-    if (p.etape !== 'confirme') {
+    // Le devis, avec le créneau choisi en même temps
+    if (['discussion', 'devis'].includes(p.etape)) {
       const d = p.devis || {};
+      const duree = selectDuree('duree', d.duree || 120, 'f-duree');
       const form = el('form', { class: 'outil formulaire' },
         el('p', { class: 'box-title' }, p.devis ? 'Devis envoyé · le modifier' : 'Envoyer le devis'),
         el('div', { class: 'deux' },
           champ('Prix (€)', { name: 'prix', id: 'f-prix', type: 'number', min: 1, step: 1, required: true, valeur: d.prix ?? (p.flash && p.flash.prix) ?? '', inputmode: 'numeric' }),
           champ('Acompte (€)', { name: 'acompte', id: 'f-acompte', type: 'number', min: 1, step: 1, required: true, valeur: d.acompte ?? '', inputmode: 'numeric' })),
-        el('div', { class: 'field' }, el('label', { for: 'f-duree' }, 'Durée de la séance'), selectDuree('duree', d.duree || 120, 'f-duree')),
+        el('div', { class: 'field' }, el('label', { for: 'f-duree' }, 'Durée de la séance'), duree),
+        el('p', { class: 'box-title box-title--sous' }, 'Le créneau'),
+        choixCreneau(p, { debut: p.creneau ? p.creneau.debut : '', selectDuree: duree, prefixe: 'f' }),
         champ('Détails (facultatif)', { name: 'details', id: 'f-details', rows: 3, maxlength: 1000, valeur: d.details || '' }),
         bouton(p.devis ? 'Renvoyer le devis' : 'Envoyer le devis', { type: 'submit', class: 'btn-plein' }, 'send'));
       const prix = form.querySelector('#f-prix');
@@ -298,19 +349,23 @@
       prix.addEventListener('input', () => { if (!acompte.dataset.touche && prix.value) acompte.value = Math.max(1, Math.round(prix.value * 0.3)); });
       acompte.addEventListener('input', () => { acompte.dataset.touche = '1'; });
       if (d.acompte) acompte.dataset.touche = '1';
-      form.addEventListener('submit', action('devis', null, p.creneau ? 'Modifier le devis annule le créneau proposé. Continuer ?' : null));
+      form.addEventListener('submit', action('devis'));
       blocs.push(form);
     }
 
-    // Le créneau : c'est la tatoueuse qui le choisit, une fois le devis accepté.
+    // Le créneau, une fois le devis accepté : le fixer s'il ne l'était pas, ou le déplacer.
     if (p.devis && !['discussion', 'devis'].includes(p.etape)) {
+      const duree = selectDuree('duree', (p.creneau || p.devis).duree, 'f-duree-c');
       const form = el('form', { class: 'outil formulaire' },
         el('p', { class: 'box-title' }, p.creneau ? 'Créneau · le déplacer' : 'Choisir le créneau'),
         p.creneau ? el('p', { class: 'creneau-date' }, icone('calendar'), Sha.creneau(p.creneau.debut)) : el('p', { class: 'field-hint' }, 'Le devis est accepté : choisissez la date.'),
-        champ('Date et heure', { name: 'debut', id: 'f-debut', type: 'datetime-local', required: true, min: maintenantLocal(), step: 900, valeur: p.creneau ? p.creneau.debut : '' }),
-        el('div', { class: 'field' }, el('label', { for: 'f-duree-c' }, 'Durée'), selectDuree('duree', (p.creneau || p.devis).duree, 'f-duree-c')),
+        el('div', { class: 'field' }, el('label', { for: 'f-duree-c' }, 'Durée'), duree),
+        choixCreneau(p, { debut: p.creneau ? p.creneau.debut : '', selectDuree: duree, requis: true, prefixe: 'c' }),
         bouton(p.creneau ? 'Déplacer le rendez-vous' : 'Proposer ce créneau', { type: 'submit', class: 'btn-plein' }, 'calendar'));
-      form.addEventListener('submit', action('creneau'));
+      form.addEventListener('submit', (e) => {
+        if (!form.querySelector('[name=debut]').value) { e.preventDefault(); avis('Choisissez la date et l’heure.'); return; }
+        action('creneau')(e);
+      });
       blocs.push(form);
     }
 
@@ -366,6 +421,7 @@
       champ('Téléphone (facultatif)', { name: 'telephone', id: 'n-tel', type: 'tel', inputmode: 'tel' }));
     choixClient.addEventListener('change', () => { sansCompte.hidden = Boolean(choixClient.value); });
 
+    const dureeRdv = selectDureeFine('duree', 60, 'n-duree');
     const form = el('form', { class: 'modale formulaire', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'n-titre' },
       el('div', { class: 'modale-tete' },
         el('h2', { class: 'box-title', id: 'n-titre' }, depuis ? 'Nouveau rendez-vous · ' + (depuis.client ? `${depuis.client.prenom} ${depuis.client.nom}`.trim() : '') : 'Ajouter un rendez-vous'),
@@ -373,9 +429,8 @@
       depuis ? null : el('div', { class: 'field' }, el('label', { for: 'n-client' }, 'Client'), choixClient),
       depuis ? null : sansCompte,
       champ('Objet', { name: 'titre', id: 'n-objet', required: true, maxlength: 80, valeur: depuis ? 'Retouche · ' + depuis.titre.replace(/^Retouche · /, '') : '', placeholder: 'Retouche, suite de la séance, petit tatouage…' }),
-      el('div', { class: 'deux' },
-        champ('Date et heure', { name: 'debut', id: 'n-debut', type: 'datetime-local', required: true, step: 900 }),
-        el('div', { class: 'field' }, el('label', { for: 'n-duree' }, 'Durée'), selectDureeFine('duree', 60, 'n-duree'))),
+      el('div', { class: 'field' }, el('label', { for: 'n-duree' }, 'Durée'), dureeRdv),
+      choixCreneau({ id: null }, { selectDuree: dureeRdv, requis: true, prefixe: 'n' }),
       el('div', { class: 'deux' },
         champ('Prix (€, facultatif)', { name: 'prix', id: 'n-prix', type: 'number', min: 0, inputmode: 'numeric' }),
         champ('Acompte (€, facultatif)', { name: 'acompte', id: 'n-acompte', type: 'number', min: 0, inputmode: 'numeric' }, 'Sans acompte, le rendez-vous est confirmé tout de suite.')),
@@ -387,6 +442,7 @@
       const d = Object.fromEntries(new FormData(form));
       if (depuis) d.depuis = depuis.id;
       if (!depuis && !d.client && !String(d.nom || '').trim()) { erreur.textContent = 'Choisissez un client ou indiquez un nom.'; return; }
+      if (!d.debut) { erreur.textContent = 'Choisissez la date et l’heure.'; return; }
       const envoi = form.querySelector('[type=submit]');
       envoi.classList.add('occupe');
       try {

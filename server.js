@@ -513,7 +513,7 @@ function contexte(req, chemin) {
       avatar: r.profil,
       depositTerms: r.conditionsAcompte,
       about: { paragraphs: r.presentation.split(/\n+/).map((s) => s.trim()).filter(Boolean) },
-      photos: { hero: photos[0] || null, gallery: photos },
+      photos: { hero: CONFIG.photoUne || photos[0] || null, gallery: photos },
       legal: { company: r.nom, status: '', siret: '', publisher: '', host: '', ...CONFIG.legal },
     },
   };
@@ -744,8 +744,14 @@ route('POST', '/api/projets/([\\w-]+)/messages', (req, res, corps, [pid]) => {
 route('POST', '/api/projets/([\\w-]+)/accepter-devis', (req, res, corps, [pid]) => {
   const p = projetDe(clientConnecte(req), pid);
   if (p.etape !== 'devis') throw new Erreur(400, 'Aucun devis en attente.');
-  p.etape = 'devis_accepte';
-  ajouterMessage(p, 'systeme', `Devis accepté (${p.devis.prix} €). Votre créneau va vous être proposé.`);
+  if (p.creneau) {
+    // Devis et créneau acceptés ensemble : reste l'acompte.
+    p.etape = 'creneau';
+    ajouterMessage(p, 'systeme', `Devis accepté (${p.devis.prix} €) pour le ${fmtCreneau(p.creneau.debut)}. Réglez l’acompte de ${p.devis.acompte} € pour bloquer ce créneau.`);
+  } else {
+    p.etape = 'devis_accepte';
+    ajouterMessage(p, 'systeme', `Devis accepté (${p.devis.prix} €). Votre créneau va vous être proposé.`);
+  }
   p.vuClient = p.messages.length;
   sauver();
   return vueProjet(p);
@@ -857,27 +863,53 @@ route('POST', '/api/sha/projets/([\\w-]+)/messages', actionSha((p, corps) => {
   ajouterMessage(p, 'sha', msg, corps.image ? enregistrerImage(corps.image, CHAT) : null);
 }));
 
+/** Un créneau saisi par la tatoueuse : format, date à venir, et pas de chevauchement. */
+function creneauValide(p, debutSaisi, dureeSaisie) {
+  const debut = String(debutSaisi || '');
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(debut) || !isValidDate(debut.slice(0, 10)) || toMinutes(debut.slice(11)) === null) {
+    throw new Erreur(400, 'Date ou heure invalide.');
+  }
+  if (Date.parse(debut) < Date.now()) throw new Erreur(400, 'Ce créneau est déjà passé.');
+  const duree = entier(dureeSaisie, 15, 720, 'Durée (minutes)');
+  const conflit = chevauchement(p, debut, duree);
+  if (conflit) throw new Erreur(409, messageConflit(conflit));
+  return { debut, duree };
+}
+
+/** Pourquoi un créneau n'est pas libre, dit simplement. */
+function messageConflit(x) {
+  const quand = fmtCreneau(x.creneau.debut);
+  if (x.etape === 'devis') return `Créneau déjà proposé à une autre personne (${quand}) : devis pas encore accepté.`;
+  if (x.etape === 'creneau') return `Créneau déjà proposé à une autre personne (${quand}) : acompte toujours pas payé.`;
+  if (x.etape === 'acompte_declare') return `Créneau déjà proposé à une autre personne (${quand}) : acompte en cours de vérification.`;
+  return `Créneau déjà réservé (${quand}) : rendez-vous confirmé.`;
+}
+
+// Le devis, avec le créneau choisi en même temps (facultatif : il peut aussi être fixé plus tard).
 route('POST', '/api/sha/projets/([\\w-]+)/devis', actionSha((p, corps) => {
   if (['confirme', 'annule'].includes(p.etape)) throw new Erreur(400, 'Ce rendez-vous est déjà confirmé ou clôturé.');
   const prix = entier(corps.prix, 1, 20000, 'Prix');
   const acompte = entier(corps.acompte, 1, prix, 'Acompte');
   const duree = entier(corps.duree, 15, 720, 'Durée (minutes)');
   const details = texte(corps.details, 1000, 'Détails', false);
+  const creneau = corps.debut ? creneauValide(p, corps.debut, duree) : null;
   p.devis = { prix, acompte, duree, details, at: Date.now() };
-  p.creneau = null;
+  p.creneau = creneau;
   p.acompte = null;
   p.etape = 'devis';
-  ajouterMessage(p, 'systeme', `Devis envoyé : ${prix} € (acompte ${acompte} €), séance d'environ ${dureeTexte(duree)}.`);
+  ajouterMessage(p, 'systeme', `Devis envoyé : ${prix} € (acompte ${acompte} €), séance d'environ ${dureeTexte(duree)}` +
+    (creneau ? `, le ${fmtCreneau(creneau.debut)}.` : '.'));
 }));
 
 route('POST', '/api/sha/projets/([\\w-]+)/creneau', actionSha((p, corps) => {
-  if (!p.devis || ['discussion', 'devis', 'annule'].includes(p.etape)) throw new Erreur(400, 'Le client doit d’abord accepter le devis.');
-  const debut = String(corps.debut || '');
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(debut) || Number.isNaN(Date.parse(debut + ':00Z'))) throw new Erreur(400, 'Date ou heure invalide.');
-  if (Date.parse(debut) < Date.now()) throw new Erreur(400, 'Ce créneau est déjà passé.');
-  const duree = entier(corps.duree ?? p.devis.duree, 15, 720, 'Durée (minutes)');
-  const conflit = chevauchement(p, debut, duree);
-  if (conflit) throw new Erreur(409, `Ce créneau chevauche « ${conflit.titre} » (${fmtCreneau(conflit.creneau.debut)}).`);
+  if (!p.devis || ['discussion', 'annule'].includes(p.etape)) throw new Erreur(400, 'Envoyez d’abord le devis.');
+  const { debut, duree } = creneauValide(p, corps.debut, corps.duree ?? p.devis.duree);
+  if (p.etape === 'devis') {
+    // Devis pas encore accepté : le créneau change simplement dans le devis.
+    p.creneau = { debut, duree };
+    ajouterMessage(p, 'systeme', `Créneau du devis modifié : ${fmtCreneau(debut)}.`);
+    return;
+  }
   const deplacement = Boolean(p.creneau);
   p.creneau = { debut, duree };
   if (!['acompte_declare', 'confirme'].includes(p.etape)) p.etape = 'creneau';
@@ -1092,7 +1124,7 @@ route('POST', '/api/sha/rendez-vous', (req, res, corps) => {
     etape: acompte ? 'creneau' : 'confirme', vuClient: 0, vuSha: 0, parSalon: true, depuis: depuis ? depuis.id : null,
   };
   const conflit = chevauchement(p, debut, duree);
-  if (conflit) throw new Erreur(409, `Ce créneau chevauche « ${conflit.titre} » (${fmtCreneau(conflit.creneau.debut)}).`);
+  if (conflit) throw new Erreur(409, messageConflit(conflit));
   p.creneau = { debut, duree };
   ajouterMessage(p, 'systeme', `Rendez-vous fixé par le salon : ${fmtCreneau(debut)}, ${dureeTexte(duree)}.` +
     (acompte ? ` Réglez l’acompte de ${acompte} € pour le confirmer.` : ''));

@@ -39,6 +39,9 @@ module.exports = {
   // La photo de profil (médaillon rond cerclé de violet, à côté du nom du salon).
   avatar: '/img/profil.webp',
 
+  // La grande photo de la une (sinon, la dernière réalisation publiée).
+  photoUne: { src: '/img/une.webp', alt: 'Jambe : pivoines, cœur, roses et lettrage en traits fins', ratio: '3/4', width: 337, height: 547 },
+
   timezone: 'Europe/Paris',
 
   // Horaires. 0 = dimanche, 1 = lundi … 6 = samedi.

@@ -185,6 +185,27 @@ test('parcours complet : compte 18+, demande préparée par l’assistant, devis
   await autre('POST', `/api/projets/${p2}/accepter-devis`, {});
   r = await sha('POST', `/api/sha/projets/${p2}/creneau`, { debut: '2099-01-10T15:00', duree: 30 });
   assert.strictEqual(r.status, 409);
+  assert.match(r.corps.erreur, /déjà réservé/);
+
+  // Le créneau choisi avec le devis : une heure « ronde » est acceptée (le bug « format invalide »)
+  const p3 = (await autre('POST', '/api/projets', { ...demande, emplacement: 'Cheville', taille: '5 cm' })).corps.id;
+  r = await sha('POST', `/api/sha/projets/${p3}/devis`, { prix: 80, acompte: 25, duree: 60, debut: '2027-07-15T14:00' });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.corps));
+  assert.strictEqual(r.corps.etape, 'devis');
+  assert.deepStrictEqual(r.corps.creneau, { debut: '2027-07-15T14:00', duree: 60 });
+  // Une autre demande sur ce même créneau : « devis pas encore accepté »
+  const p4 = (await client('POST', '/api/projets', { ...demande, emplacement: 'Nuque', taille: '4 cm' })).corps.id;
+  r = await sha('POST', `/api/sha/projets/${p4}/devis`, { prix: 50, acompte: 15, duree: 30, debut: '2027-07-15T14:30' });
+  assert.strictEqual(r.status, 409);
+  assert.match(r.corps.erreur, /déjà proposé à une autre personne.*devis pas encore accepté/);
+  // Devis et créneau acceptés ensemble : reste l'acompte
+  r = await autre('POST', `/api/projets/${p3}/accepter-devis`, {});
+  assert.strictEqual(r.corps.etape, 'creneau');
+  r = await sha('POST', `/api/sha/projets/${p4}/devis`, { prix: 50, acompte: 15, duree: 30, debut: '2027-07-15T14:30' });
+  assert.match(r.corps.erreur, /acompte toujours pas payé/);
+  // Date impossible refusée
+  r = await sha('POST', `/api/sha/projets/${p4}/devis`, { prix: 50, acompte: 15, duree: 30, debut: '2027-02-30T10:00' });
+  assert.strictEqual(r.status, 400);
 
   // Cloisonnement : un client ne voit pas la demande d'un autre
   assert.strictEqual((await autre('GET', `/api/projets/${pid}`)).status, 404);
@@ -344,6 +365,9 @@ test('l’espace salon : galerie, horaires, photo de profil, refus des faux fich
   // Photo de profil : le médaillon à côté du nom
   // Par défaut, la photo de profil du salon (salon.config.js)
   assert.ok((await page('/')).html.includes('class="brand-avatar" src="/img/profil.webp"'));
+  // La grande photo de la une
+  assert.ok((await page('/')).html.includes('src="/img/une.webp"'));
+  assert.strictEqual((await fetch(base + '/img/une.webp')).status, 200);
   assert.strictEqual((await fetch(base + '/img/profil.webp')).status, 200);
   r = await sha('POST', '/api/sha/profil', { image: png });
   assert.match(r.corps.profil, /^\/galerie\//);

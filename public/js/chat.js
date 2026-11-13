@@ -378,8 +378,9 @@ window.ShaChat = (() => {
       case 'devis':
         return el('section', { class: 'carte carte-devis' },
           el('p', { class: 'box-title' }, 'Votre devis'), lignesDevis,
+          p.creneau ? el('p', { class: 'creneau-date' }, icone('calendar'), Sha.creneau(p.creneau.debut)) : null,
           d.details ? el('p', { class: 'devis-details' }, d.details) : null,
-          bouton('J’accepte ce devis', { class: 'btn--accent btn-plein', onclick: faire('accepter-devis') }, 'check'),
+          bouton(p.creneau ? 'J’accepte le devis et le créneau' : 'J’accepte ce devis', { class: 'btn--accent btn-plein', onclick: faire('accepter-devis') }, 'check'),
           el('p', { class: 'field-hint' }, 'Une question ou un changement ? Écrivez ci-dessous.'));
       case 'devis_accepte':
         return el('section', { class: 'carte' }, el('p', { class: 'box-title' }, 'Devis accepté'),
