@@ -2,3 +2,5 @@ node_modules/
 # Comptes, messages, photos des clients et de la galerie, codes d'accès : jamais publiés.
 data/
 .claude/
+# La démonstration fabriquée pour GitHub Pages (refaite par GitHub à chaque envoi).
+_site/

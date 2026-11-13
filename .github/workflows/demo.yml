@@ -1,0 +1,39 @@
+# Tient à jour la démonstration du site sur GitHub Pages, à chaque envoi sur « main ».
+# GitHub Pages n'affiche que des fichiers fixes : la démo montre les pages publiques, mais la
+# messagerie et l'espace salon n'y fonctionnent pas (il faut le vrai serveur pour ça).
+name: Démonstration en ligne
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Vérifier le site
+        run: node --test --test-concurrency=1 "test/*.test.js"
+      - name: Fabriquer la démonstration
+        run: node scripts/export-demo.js _site --base=/${{ github.event.repository.name }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

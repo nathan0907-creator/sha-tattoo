@@ -8,7 +8,8 @@
     "start": "node server.js",
     "open": "node server.js --open",
     "test": "node --test \"test/*.test.js\"",
-    "reinitialiser-acces": "node scripts/mot-de-passe.js"
+    "reinitialiser-acces": "node scripts/mot-de-passe.js",
+    "demo": "node scripts/export-demo.js _site --base=/sha-tattoo"
   },
   "engines": {
     "node": ">=22"

@@ -27,6 +27,12 @@ window.ShaChat = (() => {
     fond.hidden = false;
     document.documentElement.classList.add('chat-ouvert');
     requestAnimationFrame(() => chat.classList.add('ouvert'));
+    // Démo sur GitHub Pages : pas de serveur, donc ni compte ni conversation.
+    if (document.documentElement.dataset.demo) {
+      afficher([intro('Démonstration', 'Sur le vrai site, ce bouton ouvre la création de compte puis la conversation avec la tatoueuse : photo de référence, endroit, taille, devis, créneau et acompte.'),
+        el('p', { class: 'notice' }, 'Cette version de démonstration ne peut pas envoyer de messages.')], { sousTitre: 'Démo' });
+      return;
+    }
     if (opts.flash) etat.flash = await trouverFlash(opts.flash);
     if (!etat.charge || opts.flash) await charger();
     focusPremier();
