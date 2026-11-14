@@ -51,6 +51,56 @@ function copier(de, vers) {
   }
 }
 
+/**
+ * Le site est en ligne (siteUrl dans salon.config.js) : la démonstration ne sert plus qu'à y
+ * renvoyer. Chaque page de GitHub Pages mène à la même page du vrai site, adresse comprise
+ * (« …/sha-tattoo/flashs/ » → « …/flashs »), et n'apparaît pas dans les moteurs de recherche.
+ */
+const siteUrl = String(require(path.join(racine, 'salon.config.js')).siteUrl || '').replace(/\/+$/, '');
+
+function renvoi(cible, { calculee = false } = {}) {
+  const lien = cible.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  // Page inconnue : l'adresse demandée est recalculée dans le navigateur, sans le dossier « /sha-tattoo ».
+  const script = calculee
+    ? `var p = location.pathname, b = ${JSON.stringify(base)};
+if (b && p.indexOf(b) === 0) p = p.slice(b.length);
+location.replace(${JSON.stringify(siteUrl)} + (p || '/') + location.search + location.hash);`
+    : `location.replace(${JSON.stringify(cible)} + location.search + location.hash);`;
+  return `<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sha Tattoo</title>
+<meta name="robots" content="noindex">
+${calculee ? '' : `<link rel="canonical" href="${lien}">\n<meta http-equiv="refresh" content="0; url=${lien}">`}
+<script>${script}</script>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f1efec;color:#2c2038;font:18px/1.5 system-ui,sans-serif;text-align:center}a{color:#7b2f86}</style>
+</head>
+<body>
+<p>Sha Tattoo est sur<br><a href="${calculee ? siteUrl : lien}">${siteUrl.replace(/^https:\/\//, '')}</a></p>
+</body>
+</html>
+`;
+}
+
+if (siteUrl) {
+  fs.rmSync(sortie, { recursive: true, force: true });
+  // Les images et vidéos restent à leur adresse (liens déjà partagés) ; les pages, elles, renvoient.
+  copier(path.join(racine, 'public'), sortie);
+  for (const page of PAGES) {
+    const fichier = page === '/' ? path.join(sortie, 'index.html') : path.join(sortie, page.slice(1), 'index.html');
+    fs.mkdirSync(path.dirname(fichier), { recursive: true });
+    fs.writeFileSync(fichier, renvoi(siteUrl + page));
+  }
+  fs.writeFileSync(path.join(sortie, '404.html'), renvoi(siteUrl, { calculee: true }));
+  fs.writeFileSync(path.join(sortie, '.nojekyll'), '');
+  fs.writeFileSync(path.join(sortie, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
+  fs.rmSync(donnees, { recursive: true, force: true });
+  console.log(`Démonstration : ${PAGES.length} pages qui renvoient vers ${siteUrl}.`);
+  process.exit(0);
+}
+
 const serveur = http.createServer((req, res) => gerer(req, res));
 serveur.listen(0, async () => {
   const adresse = `http://localhost:${serveur.address().port}`;

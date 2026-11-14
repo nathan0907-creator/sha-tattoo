@@ -16,8 +16,9 @@ module.exports = {
   // Le gros titre de la une, ligne par ligne. Un mot entre _tirets bas_ est écrit en cursive.
   headline: ['Votre tatouage,', '_sur mesure_'],
 
-  // Adresse publique du site, une fois en ligne (laisser vide en attendant).
-  siteUrl: '',
+  // Adresse publique du site (Cloudflare, depuis le 14 novembre 2026). La démonstration GitHub Pages
+  // renvoie ici. Avec un nom de domaine, mettre sa nouvelle adresse (et « routes » dans wrangler.jsonc).
+  siteUrl: 'https://sha-tattoo.plantefevenathan.workers.dev',
 
   seo: { nearby: ['Lens', 'Harnes', 'Noyelles-sous-Lens'] },
 

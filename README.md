@@ -56,7 +56,10 @@ npx wrangler dev
 
 avec un fichier `.dev.vars` (jamais publié) contenant `SETUP_CODE=1234-5678`.
 
-## La démonstration
+## L'adresse du site
 
-Une copie fixe des pages publiques est publiée sur GitHub Pages à chaque envoi
-(`.github/workflows/demo.yml`) : https://nathan0907-creator.github.io/sha-tattoo/
+En ligne : **https://sha-tattoo.plantefevenathan.workers.dev** (`siteUrl` dans `salon.config.js`).
+
+L'ancienne démonstration GitHub Pages (https://nathan0907-creator.github.io/sha-tattoo/) renvoie
+désormais chaque page vers la même page du vrai site (`scripts/export-demo.js`, refait à chaque
+envoi par `.github/workflows/demo.yml`). Sans `siteUrl`, le script refabriquerait une copie fixe.
