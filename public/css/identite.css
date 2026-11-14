@@ -31,6 +31,15 @@ body {
   font-weight: 400;
   line-height: 1.62;
   letter-spacing: .005em;
+  /* Fond uni : le grain « papier journal » (une petite texture agrandie) paraissait flou sur
+     les écrans de téléphone, derrière tout le texte. */
+  background-image: none;
+  -webkit-font-smoothing: auto;
+}
+
+/* Même chose pour la messagerie qui s'ouvre sur le côté. */
+.chat {
+  background-image: none;
 }
 
 /* ── Titres ─────────────────────────────────────────────────────────────── */
@@ -41,9 +50,28 @@ h1, h2, h3 {
 }
 
 .headline {
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: .01em;
   line-height: .98;
+}
+
+/* Petit écran : les traits fins de Cormorant s'épaississent un peu pour rester nets. */
+@media (max-width: 40rem) {
+  .headline,
+  .headline em,
+  .section-title,
+  .menu-group-title,
+  .deck,
+  .masthead-ear-slot,
+  .video-titre,
+  .planche-nom,
+  .ev-nom {
+    font-weight: 600;
+  }
+
+  body {
+    font-weight: 450;
+  }
 }
 
 /* Le mot fort : en italique, en violet (et non plus en écriture d'enseigne). */
