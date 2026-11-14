@@ -361,10 +361,122 @@ h1, h2, h3 {
   padding-block: .6rem;
 }
 
-/* ── Le post-it de la carte : en écriture fine ──────────────────────────── */
+/* ── La carte : les spécialités, et le post-it avec son « ici » ─────────── */
+
+.carte-liste {
+  border-top-color: var(--line-strong);
+}
+
+.carte-liste li {
+  gap: .9rem;
+  padding-block: 1rem;
+  border-bottom-color: var(--line);
+  font-size: clamp(1.3rem, 2.8vw, 1.75rem);
+  font-weight: 500;
+}
+
+/* Un petit losange au trait devant chaque spécialité */
+.carte-liste li::before {
+  width: .5rem;
+  height: .5rem;
+  border: 1px solid var(--gold);
+  background: transparent;
+  rotate: 45deg;
+  translate: 0 -.2em;
+}
+
+.post-it {
+  gap: .35rem;
+  font-size: clamp(2rem, 6vw, 2.35rem);
+}
+
+.post-it p {
+  margin: 0;
+}
 
 .post-it span {
   font-family: var(--font-name);
+}
+
+/* « ici » : écrit à la main et entouré d'un trait de stylo violet. C'est le bouton du devis. */
+.post-it-ici {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: .3rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin-top: .1rem;
+  padding: .05em .55em .1em .6em;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-name);
+  font-size: 1.25em;
+  line-height: 1;
+  cursor: pointer;
+  rotate: -4deg;
+  transition: color .25s ease, rotate .4s var(--ease-out), scale .4s var(--ease-out);
+}
+
+/* Le cercle tracé à la main, un peu de travers, qui ne se referme pas tout à fait */
+.post-it-ici::before {
+  content: "";
+  position: absolute;
+  inset: -.05em -.15em -.12em -.1em;
+  border: 2px solid var(--gold);
+  border-radius: 55% 45% 50% 50% / 60% 50% 55% 45%;
+  border-top-color: transparent;
+  rotate: -8deg;
+  transition: background-color .25s ease, border-color .25s ease;
+}
+
+.post-it-ici::after {
+  content: "";
+  position: absolute;
+  top: .02em;
+  left: .1em;
+  width: 65%;
+  height: .5em;
+  border-top: 2px solid var(--gold);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  rotate: -10deg;
+}
+
+.post-it-ici-mot {
+  position: relative;
+  color: var(--gold);
+}
+
+.post-it-ici .icon {
+  position: relative;
+  width: .55em;
+  height: .55em;
+  color: var(--gold);
+  stroke-width: 2.2;
+  transition: translate .4s var(--ease-out);
+}
+
+@media (hover: hover) {
+  .post-it-ici:hover {
+    rotate: -1deg;
+    scale: 1.08;
+  }
+
+  .post-it-ici:hover::before {
+    background: rgba(198, 143, 207, .28);
+  }
+
+  .post-it-ici:hover .icon {
+    translate: .15em 0;
+  }
+}
+
+.post-it-ici:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+  border-radius: 2rem;
 }
 
 /* ── Pied de page ───────────────────────────────────────────────────────── */

@@ -269,8 +269,12 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   assert.match(texteUne, /Sha Tattoo/);
   assert.match(texteUne, /9 Route de Lille/);
   assert.match(texteUne, /Ouvert du mardi au samedi/);
-  assert.match(texteUne, /Trait fin/);
-  assert.match(texteUne, /Mais seulement par devis/);
+  // La carte : ses spécialités, et le post-it dont le « ici » ouvre la demande de devis
+  for (const s of ['Tatouage en traits fins (fineline)', 'Noir et blanc, ombrages', 'Projets personnalisés, floraux et lettrages', 'Strass dentaires et blanchiment']) {
+    assert.ok(texteUne.includes(s), s);
+  }
+  assert.match(texteUne, /Mais seulement par devis ici/);
+  assert.match(une.html, /<button type="button" class="post-it-ici" data-ouvrir-chat aria-label="Demander un devis">/);
   assert.ok(!une.html.includes('<s>'), 'la carte n’est plus barrée');
   // Le téléphone ne paraît que dans le pied de page
   for (const chemin of ['/', '/rendez-vous', '/nous-trouver', '/prestations']) {
