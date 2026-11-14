@@ -77,7 +77,7 @@ function hoursTable(config, now) {
         <td>${row.label}</td>
       </tr>`)}
     </tbody>
-  </table>`;
+  </table>${config.hoursNote ? html`<p class="hours-note">${config.hoursNote}</p>` : ''}`;
 }
 
 /** « du mardi au samedi » : premier et dernier jour d'ouverture de la semaine. */

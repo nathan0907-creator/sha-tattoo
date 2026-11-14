@@ -324,6 +324,17 @@ function initialiser(nouveauStockage, { code = '' } = {}) {
     db.flashsDepart = true;
   }
 
+  // Les fermetures données par la tatoueuse dans salon.config.js : ajoutées une seule fois au
+  // calendrier (elle peut ensuite les retirer ou les changer dans l'onglet Fermetures).
+  const ajoutees = new Set(db.fermeturesAjoutees || []);
+  for (const f of CONFIG.fermetures || []) {
+    if (!f.cle || ajoutees.has(f.cle)) continue;
+    const au = f.au || f.du;
+    db.exceptions.push({ id: id(), type: f.type, du: f.du, au, plages: f.type === 'fermeture' ? [] : lirePlages(f.horaires, weekday(f.du)), motif: f.motif || '', at: Date.now() });
+    ajoutees.add(f.cle);
+  }
+  db.fermeturesAjoutees = [...ajoutees];
+
   for (const [k, s] of Object.entries(db.sessions)) if (s.exp < Date.now()) delete db.sessions[k];
 
   codeConfiguration = null;
@@ -603,6 +614,8 @@ function contexte(req, chemin) {
       },
       booking: { ...CONFIG.booking },
       hours,
+      hoursNote: CONFIG.hoursNote || '',
+      style: CONFIG.style || '',
       specialties: r.specialites.split(/\n+/).map((s) => s.trim()).filter(Boolean),
       avatar: r.profil,
       depositTerms: r.conditionsAcompte,
@@ -610,7 +623,10 @@ function contexte(req, chemin) {
       // Les photos publiées par Shannon ; à défaut, ses flashs (demande de la cliente : « remplace les
       // photos par les flashs ») ; à défaut encore, les images « exemple ».
       photos: (() => {
-        const planches = images.filter((g) => g.type === 'flash' && g.dispo !== false).map(decrireImage);
+        // Les planches les plus nettes d'abord (plus de pixels) : certaines ne font que 226 pixels de
+        // large et seraient floues en grand sur un téléphone.
+        const planches = images.filter((g) => g.type === 'flash' && g.dispo !== false)
+          .sort((a, b) => (b.largeur || 0) - (a.largeur || 0)).map(decrireImage);
         const gallery = photos.length ? photos : planches.length ? planches : (CONFIG.photosExemple || []);
         return { hero: photos[0] || planches[0] || CONFIG.photoUne || null, gallery };
       })(),

@@ -311,8 +311,41 @@ h1, h2, h3 {
   }
 }
 
-.site-nav li a {
-  letter-spacing: .1em;
+/* Téléphone et tablette : le sommaire plein écran, en grand mais sans déborder. */
+@media (max-width: 62rem) {
+  .site-nav ul {
+    border-top-width: 1px;
+  }
+
+  .site-nav li a {
+    font-size: clamp(1.9rem, 8.6vw, 3rem);
+    font-weight: 500;
+    letter-spacing: .02em;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+    border-bottom-color: var(--line-strong);
+  }
+}
+
+/* « Uniquement sur rendez-vous » : un trait de surligneur sous chaque ligne (sur deux lignes, il
+   ne barre plus le texte). */
+.house-rule strong {
+  background: none;
+  text-decoration: underline;
+  text-decoration-color: var(--gold-bright);
+  text-decoration-thickness: .22em;
+  text-decoration-skip-ink: none;
+  text-underline-offset: -.02em;
+}
+
+/* La note sous les horaires (mercredi matin, samedi après-midi) */
+.hours-note {
+  margin: .6rem 0 0;
+  color: var(--soft);
+  font-family: var(--font-head);
+  font-size: 1.02rem;
+  font-style: italic;
+  line-height: 1.35;
 }
 
 /* ── Le nom du salon ────────────────────────────────────────────────────── */

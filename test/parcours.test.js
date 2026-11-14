@@ -349,9 +349,10 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   const texteUne = lisible(une.html);
   assert.match(texteUne, /Sha Tattoo/);
   assert.match(texteUne, /9 Route de Lille/);
-  assert.match(texteUne, /Ouvert du mardi au samedi/);
+  assert.match(texteUne, /Ouvert du lundi au samedi/);
+  assert.match(texteUne, /Spécialiste fineline · floral · ornemental · black &amp; grey/);
   // La carte : ses spécialités, et le post-it dont le « ici » ouvre la demande de devis
-  for (const s of ['Tatouage en traits fins (fineline)', 'Noir et blanc, ombrages', 'Projets personnalisés, floraux et lettrages', 'Strass dentaires et blanchiment']) {
+  for (const s of ['Fineline', 'Floral', 'Ornemental', 'Black &amp; grey']) {
     assert.ok(texteUne.includes(s), s);
   }
   assert.match(texteUne, /Mais seulement par devis ici/);
@@ -388,7 +389,11 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   const jour = (nom, horaires) => new RegExp(`${nom} (\\(aujourd'hui\\) )?${horaires}`);
   assert.match(pratique, jour('Mardi', '9h – 12h30 · 13h30 – 17h'));
   assert.match(pratique, jour('Vendredi', '9h – 12h30 · 13h – 17h'));
-  assert.match(pratique, jour('Lundi', 'Fermé'));
+  assert.match(pratique, jour('Lundi', '9h – 12h30 · 13h30 – 17h'));
+  assert.match(pratique, jour('Mercredi', '13h30 – 18h'));
+  assert.match(pratique, jour('Samedi', '10h – 12h30 · 13h30 – 15h'));
+  assert.match(pratique, jour('Dimanche', 'Fermé'));
+  assert.match(pratique, /Mercredi matin : ouvert pendant les vacances scolaires/);
 
   for (const chemin of ['/prestations', '/galerie', '/mentions-legales', '/confidentialite', '/conditions', '/salon']) {
     assert.strictEqual((await page(chemin)).status, 200, chemin);
@@ -452,6 +457,14 @@ test('fermetures, ouvertures et horaires exceptionnels ; jours fériés fermés 
   const sha = await salon();
   const cal = (await sha('GET', '/api/sha/calendrier')).corps;
   assert.ok(cal.feries.auto);
+  // Les fermetures de fin d'année données par Shannon (salon.config.js) sont dans son calendrier,
+  // une seule fois, avec les bonnes heures (tant qu'elles ne sont pas passées).
+  if (new Date() < new Date('2027-01-05')) {
+    const fin = cal.exceptions.filter((e) => e.du >= '2026-12-24' && e.du <= '2027-01-01');
+    assert.deepStrictEqual(fin.map((e) => `${e.du} ${e.type}`), ['2026-12-24 horaires', '2026-12-25 fermeture', '2026-12-30 horaires', '2026-12-31 horaires', '2027-01-01 fermeture']);
+    assert.deepStrictEqual(fin[3].plages, [{ start: 540, end: 750 }, { start: 810, end: 855 }], '31/12 : jusqu’à 14 h 15');
+    assert.strictEqual(fin[4].au, '2027-01-05');
+  }
   // Les jours fériés tombant un jour travaillé sont listés, fermés par défaut
   assert.ok(cal.feries.prochains.length > 0 && cal.feries.prochains.every((f) => !f.ouvert));
 

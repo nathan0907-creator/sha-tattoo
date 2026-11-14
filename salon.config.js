@@ -11,7 +11,7 @@ module.exports = {
   name: 'Sha Tattoo',
   tagline: 'Tatoueuse',
   description:
-    'Sha Tattoo, tatoueuse à Loison-sous-Lens, près de Lens : tatouages en traits fins, noir et blanc, floraux, lettrages et flashs. Uniquement sur rendez-vous, après devis.',
+    'Sha Tattoo, tatoueuse à Loison-sous-Lens, près de Lens : spécialiste fineline, floral, ornemental, black & grey, et flashs. Uniquement sur rendez-vous, après devis.',
 
   // Le gros titre de la une, ligne par ligne. Un mot entre _tirets bas_ est écrit en cursive.
   headline: ['Votre tatouage,', '_sur mesure_'],
@@ -121,15 +121,31 @@ module.exports = {
 
   // Horaires. 0 = dimanche, 1 = lundi … 6 = samedi.
   // Une journée peut avoir plusieurs plages (pause déjeuner). Tableau vide = fermé.
+  // Message de Shannon (14 novembre 2026) : ouverte du lundi au samedi ; fermée seulement le mercredi
+  // matin (hors vacances scolaires) et le samedi après 15 h (en général). Le lundi reprend les
+  // horaires du mardi (heures à confirmer par Shannon).
   hours: {
-    1: [],
+    1: [['09:00', '12:30'], ['13:30', '17:00']],
     2: [['09:00', '12:30'], ['13:30', '17:00']],
     3: [['13:30', '18:00']],
     4: [['09:00', '12:30'], ['13:30', '17:00']],
     5: [['09:00', '12:30'], ['13:00', '17:00']],
-    6: [['10:00', '12:30'], ['13:30', '17:00']],
+    6: [['10:00', '12:30'], ['13:30', '15:00']],
     0: [],
   },
+  // Sous le tableau des horaires.
+  hoursNote: 'Mercredi matin : ouvert pendant les vacances scolaires. Samedi : en général jusqu’à 15 h.',
+
+  // Fermetures et horaires exceptionnels donnés par Shannon : ajoutés une fois au calendrier (elle
+  // les modifie ensuite dans son espace, onglet Fermetures). « cle » : pour ne jamais les ajouter deux fois.
+  fermetures: [
+    { cle: 'noel-2026-a', type: 'horaires', du: '2026-12-24', horaires: '9h-12h30', motif: 'fêtes de fin d’année, fermé à partir de 13 h 30' },
+    { cle: 'noel-2026-b', type: 'fermeture', du: '2026-12-25', au: '2026-12-29', motif: 'fêtes de fin d’année' },
+    { cle: 'noel-2026-c', type: 'horaires', du: '2026-12-30', horaires: '13h-18h', motif: 'réouverture à 13 h' },
+    { cle: 'noel-2026-d', type: 'horaires', du: '2026-12-31', horaires: '9h-12h30 / 13h30-14h15', motif: 'fermé à partir de 14 h 15' },
+    // « jusqu'au 06/12 après-midi » : compris comme le 6 janvier 2027 (mercredi : réouverture l'après-midi).
+    { cle: 'noel-2026-e', type: 'fermeture', du: '2027-01-01', au: '2027-01-05', motif: 'fêtes de fin d’année' },
+  ],
 
   booking: {
     appointmentOnly: 'Uniquement sur rendez-vous',
@@ -138,12 +154,10 @@ module.exports = {
 
   // La carte : les spécialités du salon, telles que Shannon les a données (les prix sont dans le devis).
   // Elle peut changer la liste elle-même (espace salon, Réglages → La carte).
-  specialties: [
-    'Tatouage en traits fins (fineline)',
-    'Noir et blanc, ombrages',
-    'Projets personnalisés, floraux et lettrages',
-    'Strass dentaires et blanchiment',
-  ],
+  // Message de Shannon (14 novembre 2026) : « Spécialiste fineline, floral, ornemental, black & grey ».
+  specialties: ['Fineline', 'Floral', 'Ornemental', 'Black & grey'],
+  // La ligne sous le nom du salon, sur la une.
+  style: 'Spécialiste fineline · floral · ornemental · black & grey',
 
   // Texte de présentation de la une, un paragraphe par ligne (modifiable depuis l'espace salon).
   about: {

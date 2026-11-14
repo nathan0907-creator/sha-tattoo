@@ -59,7 +59,7 @@ function home(site) {
       </a>
     </div>
     <p class="masthead-line" data-reveal data-delay="450">
-      <span>${config.tagline}</span><span>Traits fins · noir et blanc · floral · lettrage</span>${days ? html`<span>Ouvert ${days}</span>` : ''}
+      <span>${config.tagline}</span>${config.style ? html`<span>${config.style}</span>` : ''}${days ? html`<span>Ouvert ${days}</span>` : ''}
     </p>
     ${appointmentOnly || rule ? html`<p class="house-rule" data-reveal data-delay="550">
       ${appointmentOnly ? html`<strong>${appointmentOnly}</strong>` : ''}
