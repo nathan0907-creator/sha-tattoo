@@ -11,7 +11,7 @@ const { appointmentFlyer } = require('./home');
 const {
   PAGES, folio, picture, button, buttonLabel, splitTitle, kicker, stamp, telHref, ratioClass, euros, messageButton,
   houseRules, appointmentSentence, hoursTable, openBadge, specialtiesTable, calendarNotices, availabilityBox,
-  socialLinks, paypalButton, videoSection,
+  socialLinks, paypalButton, videoSection, eventsFor, eventsSteps, eventsPrice,
 } = require('./components');
 
 /** L'encadré « À noter » : fermetures et horaires exceptionnels à venir. */
@@ -106,8 +106,6 @@ function flashsPage(site) {
 
 // ── Page 5 — Événements : l'animation tatouage ─────────────────────────────
 
-const POUR_ICONES = { Mariages: 'rings', Anniversaires: 'cake' };
-
 function eventsPage(site) {
   const { config } = site;
   const ev = config.evenements;
@@ -123,12 +121,7 @@ function eventsPage(site) {
 
   <section class="container section" aria-labelledby="pour-titre">
     <h2 class="menu-group-title" id="pour-titre" data-reveal>Pour quels événements</h2>
-    <ul class="ev-pour" data-stagger>
-      ${ev.pour.map(name => html`<li class="ev-carte" data-reveal>
-        <span class="ev-icone">${icon(POUR_ICONES[name] || 'sparkle')}</span>
-        <h3 class="ev-nom">${name}</h3>
-      </li>`)}
-    </ul>
+    ${eventsFor(ev)}
   </section>
 
   <section class="ev-bande" aria-labelledby="deroule-titre">
@@ -137,23 +130,14 @@ function eventsPage(site) {
         <p class="kicker" data-reveal>Le jour J</p>
         <h2 class="headline headline--l" id="deroule-titre" data-reveal="lines">${splitTitle(['Comment', '_ça se passe_'])}</h2>
       </div>
-      <ol class="ev-etapes">
-        ${ev.fonctionnement.map((step, i) => html`<li data-reveal data-delay="${i * 90}"><span class="ev-num">${String(i + 1).padStart(2, '0')}</span><p>${step}</p></li>`)}
-      </ol>
+      ${eventsSteps(ev)}
     </div>
   </section>
 
   <section class="container section" aria-labelledby="tarif-titre">
-    <h2 class="menu-group-title" id="tarif-titre" data-reveal>Le tarif</h2>
+    <h2 class="menu-group-title" id="tarif-titre" data-reveal>Les tarifs</h2>
     <div class="ev-tarif">
-      <div class="ev-prix" data-reveal>
-        <p class="ev-prix-montant">${ev.tarif}</p>
-        <p>${ev.tarifDetail}</p>
-      </div>
-      <ul class="ev-reperes" data-reveal data-delay="120">
-        <li>${icon('clock')}<span>${ev.rythme}.</span></li>
-        <li>${icon('pin')}<span>Le déplacement compte dans le devis&nbsp;: indiquez le lieu de l’événement.</span></li>
-      </ul>
+      ${eventsPrice(ev, { cta: false })}
       <div class="ev-cta" data-reveal data-delay="200">
         ${messageButton('Demander un devis', { evenement: true })}
         <p class="field-hint">Indiquez le type d’événement, la date et le lieu&nbsp;: le devis arrive dans vos messages.</p>
@@ -229,8 +213,8 @@ function gallery(site) {
   <div class="container">
     ${photos.length ? html`<ul class="masonry" data-gallery>
       ${photos.map((photo, i) => html`<li class="masonry-item ${ratioClass(photo)}" data-reveal>
-        <button type="button" class="masonry-button frame" data-index="${i}" data-full="${photo.src}" data-caption="${photo.alt}" data-cursor="Voir" aria-label="Agrandir la photo : ${photo.alt}">
-          ${picture(photo)}
+        <button type="button" class="masonry-button frame" data-index="${i}" data-full="${photo.src}" data-caption="${photo.alt}" data-cursor="Voir" aria-label="Agrandir : ${photo.alt}">
+          ${picture(photo, { className: photo.planche ? 'is-planche' : '' })}
         </button>
       </li>`)}
     </ul>` : comingSoon('Les premières réalisations seront publiées ici.')}
@@ -480,7 +464,7 @@ function privacy(site) {
       <p>Ce site ne dépose aucun cookie publicitaire ni de mesure d'audience. Les seuls cookies qu'il utilise gardent votre compte connecté (et la tatoueuse connectée à son espace)&nbsp;: ils sont nécessaires à la messagerie.</p>
       <p>Le plan de la page Pratique est fourni par Google Maps, qui dépose ses propres cookies. Il ne s'affiche donc que si vous l'acceptez. Votre choix est gardé six mois dans votre navigateur et se modifie quand vous voulez&nbsp;:</p>
       <p><button type="button" class="btn btn--outline" data-cookies-open><span>Modifier mon choix</span></button></p>
-      <p>Les vidéos TikTok ne se chargent que si vous en lancez une&nbsp;: TikTok dépose alors ses propres cookies. Les liens vers Instagram, TikTok, Facebook et PayPal ouvrent ces sites, qui appliquent leurs propres règles.</p>
+      <p>Les vidéos sont lues sur le site même&nbsp;: elles ne déposent aucun cookie. Les liens vers Instagram, TikTok, Facebook et PayPal ouvrent ces sites, qui appliquent leurs propres règles.</p>
       <p>Les polices de caractères sont servies par Google Fonts, qui reçoit à cette occasion l'adresse IP de votre appareil, sans déposer de cookie.</p>
     </section>
   </div>

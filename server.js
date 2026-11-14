@@ -496,6 +496,7 @@ function decrireImage(g) {
     title: g.titre || '',
     price: g.prix || null,
     available: g.dispo !== false,
+    planche: g.type === 'flash',
     ratio,
     width: g.largeur || null,
     height: g.hauteur || null,
@@ -540,7 +541,7 @@ function contexte(req, chemin) {
     annonces: annoncesCalendrier(hours, now.date),
     disponibilites: disponibilites(hours, now),
     flashs: images.filter((g) => g.type === 'flash').map(decrireImage),
-    videos: videosActuelles().map((v) => ({ id: v.id, auteur: v.auteur, titre: v.titre || '', vignette: v.vignette || '' })),
+    videos: videosActuelles().map((v) => ({ id: v.id, auteur: v.auteur, titre: v.titre || '', vignette: v.vignette || '', fichier: v.fichier || '' })),
     client: client && {
       unread: db.projets.filter((p) => p.client === client.id).reduce((n, p) => n + (p.messages.length - p.vuClient), 0),
     },
@@ -574,8 +575,13 @@ function contexte(req, chemin) {
       avatar: r.profil,
       depositTerms: r.conditionsAcompte,
       about: { paragraphs: r.presentation.split(/\n+/).map((s) => s.trim()).filter(Boolean) },
-      // Les photos publiées par Shannon ; à défaut, les images « exemple ».
-      photos: { hero: photos[0] || CONFIG.photoUne || null, gallery: photos.length ? photos : (CONFIG.photosExemple || []) },
+      // Les photos publiées par Shannon ; à défaut, ses flashs (demande de la cliente : « remplace les
+      // photos par les flashs ») ; à défaut encore, les images « exemple ».
+      photos: (() => {
+        const planches = images.filter((g) => g.type === 'flash' && g.dispo !== false).map(decrireImage);
+        const gallery = photos.length ? photos : planches.length ? planches : (CONFIG.photosExemple || []);
+        return { hero: photos[0] || planches[0] || CONFIG.photoUne || null, gallery };
+      })(),
       legal: { company: r.nom, status: '', siret: '', publisher: '', host: '', ...CONFIG.legal },
     },
   };
@@ -1154,27 +1160,49 @@ function remplacerVideos(liste) {
   const anciennes = new Map(videosActuelles().map((v) => [v.id, v]));
   db.videos = liste.map((v) => ({ ...anciennes.get(v.id), ...v, auteur: v.auteur || (anciennes.get(v.id) || {}).auteur || '' }));
   for (const v of anciennes.values()) {
-    if (!db.videos.some((x) => x.id === v.id) && /^\/galerie\//.test(v.vignette || '')) fs.rmSync(path.join(GALERIE, path.basename(v.vignette)), { force: true });
+    if (db.videos.some((x) => x.id === v.id)) continue;
+    for (const f of [v.vignette, v.fichier]) {
+      if (/^\/galerie\//.test(f || '')) fs.rmSync(path.join(GALERIE, path.basename(f)), { force: true });
+    }
   }
-  // Les vignettes manquantes sont cherchées après coup : la page de réglages n'attend pas TikTok.
-  if (!process.env.SHA_SANS_RESEAU) for (const v of db.videos.filter((x) => !x.vignette)) chercherVignette(v);
+  // La vignette et le fichier vidéo sont cherchés après coup : la page de réglages n'attend pas TikTok.
+  if (!process.env.SHA_SANS_RESEAU) for (const v of db.videos.filter((x) => !x.fichier || !x.vignette)) chercherVideo(v);
 }
 
-async function chercherVignette(v) {
+/**
+ * Récupère, depuis la page publique de la vidéo, sa vignette et son fichier vidéo, enregistrés
+ * ici : la vidéo est ensuite lue sur le site même, sans lecteur TikTok (donc sans ses cookies).
+ * Si TikTok refuse, la vidéo reste lisible par le lecteur TikTok (chargé au clic).
+ */
+async function chercherVideo(v) {
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36';
   try {
-    const page = `https://www.tiktok.com/@${v.auteur || 'tiktok'}/video/${v.id}`;
-    const info = await (await fetch('https://www.tiktok.com/oembed?url=' + encodeURIComponent(page), { signal: AbortSignal.timeout(8000) })).json();
-    if (info.title) v.titre = String(info.title).slice(0, 150);
-    if (info.author_unique_id && !v.auteur) v.auteur = String(info.author_unique_id).slice(0, 40);
-    if (info.thumbnail_url) {
-      const r = await fetch(info.thumbnail_url, { signal: AbortSignal.timeout(10000) });
-      const type = (r.headers.get('content-type') || '').split(';')[0];
-      const buf = Buffer.from(await r.arrayBuffer());
-      if (r.ok && /^image\/(jpeg|png|webp)$/.test(type) && buf.length < 3 * 1024 * 1024 && db.videos.includes(v)) {
-        v.vignette = '/galerie/' + enregistrerImage(`data:${type};base64,${buf.toString('base64')}`, GALERIE);
+    const r = await fetch(`https://www.tiktok.com/@${v.auteur || 'tiktok'}/video/${v.id}`, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(10000) });
+    const cookie = r.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+    const m = /<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/.exec(await r.text());
+    const item = m && JSON.parse(m[1]).__DEFAULT_SCOPE__['webapp.video-detail'].itemInfo.itemStruct;
+    if (!item || !db.videos.includes(v)) return;
+    if (item.author && item.author.uniqueId && !v.auteur) v.auteur = String(item.author.uniqueId).slice(0, 40);
+    const charger = async (url, max) => {
+      const rep = await fetch(url, { headers: { 'user-agent': UA, referer: 'https://www.tiktok.com/', cookie }, signal: AbortSignal.timeout(30000) });
+      const buf = Buffer.from(await rep.arrayBuffer());
+      return rep.ok && buf.length < max ? { type: (rep.headers.get('content-type') || '').split(';')[0], buf } : null;
+    };
+    const couverture = item.video.originCover || item.video.cover;
+    if (!v.vignette && couverture) {
+      const img = await charger(couverture, 3 * 1024 * 1024);
+      if (img && /^image\/(jpeg|png|webp)$/.test(img.type)) v.vignette = '/galerie/' + enregistrerImage(`data:${img.type};base64,${img.buf.toString('base64')}`, GALERIE);
+    }
+    if (!v.fichier && item.video.playAddr) {
+      const vid = await charger(item.video.playAddr, 60 * 1024 * 1024);
+      // Un vrai MP4 commence par une boîte « ftyp ».
+      if (vid && vid.buf.subarray(4, 8).toString() === 'ftyp') {
+        const nom = `${Date.now().toString(36)}-${crypto.randomBytes(6).toString('hex')}.mp4`;
+        fs.writeFileSync(path.join(GALERIE, nom), vid.buf);
+        v.fichier = '/galerie/' + nom;
       }
     }
-  } catch { /* sans vignette, la vidéo s'affiche quand même (fond violet, bouton lecture) */ }
+  } catch { /* sans fichier, la vidéo passe par le lecteur TikTok ; sans vignette, fond violet et bouton lecture */ }
   sauver();
 }
 
@@ -1296,7 +1324,7 @@ route('POST', '/api/sha/rendez-vous', (req, res, corps) => {
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
-  '.json': 'application/json', '.txt': 'text/plain; charset=utf-8',
+  '.json': 'application/json', '.txt': 'text/plain; charset=utf-8', '.mp4': 'video/mp4',
 };
 
 // Les mêmes en-têtes de sécurité que le site de Cyrille (le plan Google Maps est la seule page extérieure).
@@ -1330,13 +1358,27 @@ function envoyerFichier(req, res, fichier, cache) {
       res.writeHead(304, { ETag: etag, 'Cache-Control': cache });
       return res.end();
     }
-    res.writeHead(200, {
+    const entetes = {
       ...ENTETES,
       ETag: etag,
       'Content-Type': TYPES[path.extname(fichier).toLowerCase()] || 'application/octet-stream',
-      'Content-Length': st.size,
+      'Accept-Ranges': 'bytes',
       'Cache-Control': cache,
-    });
+    };
+    // Lecture par morceaux (« Range ») : Safari et l'iPhone ne lisent une vidéo qu'ainsi.
+    const plage = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (plage && (plage[1] || plage[2])) {
+      let debut = plage[1] ? Number(plage[1]) : Math.max(0, st.size - Number(plage[2]));
+      let fin = plage[1] && plage[2] ? Math.min(Number(plage[2]), st.size - 1) : st.size - 1;
+      if (debut > fin || debut >= st.size) {
+        res.writeHead(416, { 'Content-Range': `bytes */${st.size}` });
+        return res.end();
+      }
+      res.writeHead(206, { ...entetes, 'Content-Range': `bytes ${debut}-${fin}/${st.size}`, 'Content-Length': fin - debut + 1 });
+      if (req.method === 'HEAD') return res.end();
+      return fs.createReadStream(fichier, { start: debut, end: fin }).pipe(res);
+    }
+    res.writeHead(200, { ...entetes, 'Content-Length': st.size });
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(fichier).pipe(res);
   });
@@ -1430,7 +1472,7 @@ async function gerer(req, res) {
   if (page === '/robots.txt') return envoyerTexte(req, res, 200, TYPES['.txt'], 'User-agent: *\nDisallow: /salon\nDisallow: /api/\n');
 
   // Les images publiées par le salon, puis les fichiers du site
-  const m = /^\/galerie\/([\w-]+\.(?:jpg|png|webp))$/.exec(chemin);
+  const m = /^\/galerie\/([\w-]+\.(?:jpg|png|webp|mp4))$/.exec(chemin);
   if (m) return envoyerFichier(req, res, path.join(GALERIE, m[1]), 'public, max-age=31536000, immutable');
 
   const fichier = path.join(PUBLIC, chemin);

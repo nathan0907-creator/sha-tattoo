@@ -6,7 +6,7 @@ const { layout } = require('./layout');
 const {
   PAGES, picture, button, messageButton, splitTitle, kicker, sectionBar, stamp, ticker, edition, capitalize,
   ratioClass, houseRules, appointmentSentence, euros, openBadge, hoursTable, openDaysSentence, specialtiesTable,
-  calendarNotices, availabilityBox, videoSection, videoPlayer,
+  calendarNotices, availabilityBox, videoSection, videoPlayer, eventsFor, eventsSteps, eventsPrice,
 } = require('./components');
 
 const { addDays: addDaysISO } = require('../time');
@@ -77,7 +77,6 @@ function home(site) {
       <div class="frame frame--whole" data-reveal="settle" data-delay="300">
         <div class="frame-inner">${videoPlayer(top, '', { lazy: false })}</div>
       </div>
-      <figcaption class="lead-video-titre">${icon('tiktok')}<span>${top.titre || 'La vidéo à la une'}</span></figcaption>
     </figure>` : hero ? html`<figure class="lead-photo ${ratioClass(hero)}">
       <div class="frame frame--whole" data-reveal="settle" data-delay="300">
         <div class="frame-inner">${picture(hero, { lazy: false })}</div>
@@ -126,6 +125,8 @@ function home(site) {
     <p class="section-foot" data-reveal>${button('Voir les flashs', '/flashs', { variant: 'btn--outline' })}</p>
   </section>` : ''}
 
+  ${eventsSection(config)}
+
   ${gallery.length ? html`<section class="hgallery" aria-labelledby="images-titre" data-scrub="pin" data-hgallery>
     <div class="hgallery-sticky">
       <div class="container">
@@ -135,7 +136,7 @@ function home(site) {
         <ul class="hgallery-track" data-hgallery-track>
           ${gallery.slice(0, 7).map((photo, i) => html`<li class="hgallery-item hgallery-item--${i % 3} ${ratioClass(photo)}">
             <figure class="frame frame--whole" data-reveal="clip">
-              <div class="frame-inner">${picture(photo)}</div>
+              <div class="frame-inner">${picture(photo, { className: photo.planche ? 'is-planche' : '' })}</div>
             </figure>
           </li>`)}
           <li class="hgallery-item hgallery-item--end">
@@ -145,8 +146,6 @@ function home(site) {
       </div>
     </div>
   </section>` : ''}
-
-  ${eventsTeaser(config)}
 
   ${!top || otherVideos.length ? videoSection(site, { id: 'videos-une', videos: otherVideos, bar: (id, title) => sectionBar(id, title, pageOf('/galerie')) }) : ''}
 
@@ -186,24 +185,28 @@ function home(site) {
   });
 }
 
-/** La bande « Animations tatouage » de la une : à qui, le tarif, et de quoi demander un devis. */
-function eventsTeaser(config) {
+/**
+ * La rubrique « Animations tatouage » de la une, complète : pour quels événements, comment ça se
+ * passe, les tarifs, et de quoi demander un devis. (Uniquement ce que Shannon a dit.)
+ */
+function eventsSection(config) {
   const ev = config.evenements;
   if (!ev) return '';
-  return html`<section class="ev-bande ev-bande--une" aria-labelledby="ev-une-titre">
-    <div class="container ev-bande-grille">
-      <div>
-        <p class="kicker" data-reveal>Animations tatouage · page ${pageOf('/evenements').number}</p>
+  return html`<section class="ev-bande ev-bande--une" id="evenements" aria-labelledby="ev-une-titre">
+    <div class="container ev-une">
+      <header class="ev-une-tete">
+        <p class="kicker" data-reveal>Animations tatouage · événements privés</p>
         <h2 class="headline headline--l" id="ev-une-titre" data-reveal="lines">${splitTitle(['Le tatouage', "_s'invite à la fête_"])}</h2>
-      </div>
-      <div class="ev-bande-texte" data-reveal data-delay="120">
-        <p class="ev-bande-pour">${ev.pour.join(' · ')}</p>
-        <p>Une expérience originale et personnalisée pour votre événement privé. ${ev.fonctionnement[1]}</p>
-        <p class="ev-bande-prix">${ev.tarif}</p>
-        <p class="actions">
-          ${messageButton('Demander un devis', { evenement: true })}
-          ${button('Découvrir', '/evenements', { variant: 'btn--outline btn--clair' })}
-        </p>
+        <p class="ev-une-chapeau" data-reveal>Une animation tatouage le jour de votre événement : une expérience originale et personnalisée, que vos invités gardent pour toujours.</p>
+      </header>
+      ${eventsFor(ev)}
+      <div class="ev-une-grille">
+        <div>
+          <h3 class="ev-sous-titre" data-reveal>Comment ça se passe</h3>
+          ${eventsSteps(ev)}
+          <p class="actions ev-une-plus" data-reveal>${button('Tout savoir', '/evenements', { variant: 'btn--outline btn--clair' })}</p>
+        </div>
+        ${eventsPrice(ev)}
       </div>
     </div>
   </section>`;

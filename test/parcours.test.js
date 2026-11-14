@@ -338,13 +338,28 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   assert.strictEqual(require('../salon.config.js').contact.paypal, 'https://www.paypal.me/ShannonLouis641');
   assert.ok(pied.includes('#i-tiktok') && pied.includes('#i-instagram') && pied.includes('#i-facebook'));
 
-  // Les vidéos TikTok : la plus likée à la une, en grand ; les autres plus bas. Rien n'est chargé
-  // depuis TikTok avant le clic, et la politique de sécurité autorise son lecteur.
+  // Les vidéos : la plus likée à la une, en grand ; les autres plus bas. Elles sont lues sur le site
+  // même (MP4), sans lecteur TikTok ni ses cookies, et sans légende dessous.
   const lead = une.html.slice(une.html.indexOf('class="container lead'), une.html.indexOf('lead-index'));
-  assert.ok(lead.includes('data-tiktok="7707336491780934944"'));
-  assert.ok(une.html.includes('data-tiktok="7626117253783751958"'));
-  assert.ok(!une.html.includes('<iframe'));
-  assert.match((await fetch(base + '/')).headers.get('content-security-policy'), /frame-src [^;]*https:\/\/www\.tiktok\.com/);
+  assert.ok(lead.includes('<video src="/videos/7707336491780934944.mp4"'));
+  assert.ok(une.html.includes('<video src="/videos/7626117253783751958.mp4"'));
+  assert.ok(!une.html.includes('<iframe') && !une.html.includes('data-tiktok=') && !une.html.includes('video-titre'));
+  assert.doesNotMatch(lisible(une.html), /cookies de TikTok|lues depuis TikTok/);
+  // Le fichier se lit par morceaux (indispensable sur iPhone)
+  const morceau = await fetch(base + '/videos/7707336491780934944.mp4', { headers: { Range: 'bytes=0-99' } });
+  assert.strictEqual(morceau.status, 206);
+  assert.strictEqual(morceau.headers.get('content-type'), 'video/mp4');
+  assert.strictEqual((await morceau.arrayBuffer()).byteLength, 100);
+
+  // Les événements, en entier sur la une, avec les tarifs
+  const evUne = lisible(une.html.slice(une.html.indexOf('id="evenements"'), une.html.indexOf('</section>', une.html.indexOf('id="evenements"'))));
+  for (const t of ['Mariages', 'Anniversaires', 'Comment ça se passe', 'Tarifs', 'Devis à partir de 400 à 500 € minimum', 'Sur devis, à l’heure', 'Maximum de 4 tatouages par heure', 'formulaire de consentement']) {
+    assert.ok(evUne.includes(t), t);
+  }
+
+  // Les flashs à la place des photos d'exemple (bande « En images » et galerie)
+  assert.ok(une.html.includes('src="/img/flashs/flash-01.jpg"') && !une.html.includes('realisation-1.svg'));
+  assert.ok((await page('/galerie')).html.includes('class="is-planche"'));
 
   const inconnue = await page('/nimporte-quoi');
   assert.strictEqual(inconnue.status, 404);
@@ -445,10 +460,11 @@ test('l’espace salon : galerie, horaires, photo de profil, refus des faux fich
   r = await sha('POST', '/api/sha/reglages', { videos: 'https://www.tiktok.com/@sha22.10/video/7626117253783751958?is_from_webapp=1\nwww.tiktok.com/@sha22.10/video/7707336491780934944', tiktok: '@sha22.10' });
   assert.strictEqual(r.status, 200, JSON.stringify(r.corps));
   const lead = (html) => html.slice(html.indexOf('class="container lead'), html.indexOf('lead-index'));
-  assert.ok(lead((await page('/')).html).includes('data-tiktok="7626117253783751958"'), 'la première de la liste passe à la une');
+  assert.ok(lead((await page('/')).html).includes('/videos/7626117253783751958.mp4'), 'la première de la liste passe à la une');
   r = await sha('POST', '/api/sha/reglages', { videos: '' });
-  assert.ok(!(await page('/')).html.includes('data-tiktok='), 'sans vidéo, la une reprend la photo');
-  assert.ok((await page('/')).html.includes('src="/img/exemples/une.svg"'));
+  const uneSansVideo = (await page('/')).html;
+  assert.ok(!uneSansVideo.includes('<video') && !uneSansVideo.includes('data-tiktok='), 'sans vidéo, la une reprend une image');
+  assert.ok(!lead(uneSansVideo).includes('une.svg') && /<img[^>]+src="\/(galerie|img\/flashs)\//.test(lead(uneSansVideo)), 'un flash à la une');
 
   // Horaires : écrits librement, enregistrés toujours de la même façon
   r = await sha('POST', '/api/sha/reglages', { h1: '9h-12h / 14h à 18h30', h6: '' });
@@ -462,9 +478,7 @@ test('l’espace salon : galerie, horaires, photo de profil, refus des faux fich
   // Photo de profil : le médaillon à côté du nom
   // Par défaut, la photo de profil du salon (salon.config.js)
   assert.ok((await page('/')).html.includes('class="brand-avatar" src="/img/profil.webp"'));
-  // Sans photo publiée : des images « exemple » pour la une et les réalisations
-  const accueil = (await page('/')).html;
-  assert.ok(accueil.includes('src="/img/exemples/realisation-1.svg"'));
+  // Les images « exemple » restent disponibles (sans flash ni photo publiés)
   assert.strictEqual((await fetch(base + '/img/exemples/une.svg')).status, 200);
   assert.strictEqual((await fetch(base + '/img/exemples/realisation-6.svg')).status, 200);
   assert.strictEqual((await fetch(base + '/img/profil.webp')).status, 200);

@@ -39,13 +39,17 @@ module.exports = {
     { id: '7626117253783751958', titre: 'Joli dos floral' },
     { id: '7696216766401334561', titre: 'Une jolie lionne' },
     { id: '7686918937346460960', titre: 'Des fleurs et surtout de la fineline' },
-  ].map((v) => ({ ...v, auteur: 'sha22.10', vignette: `/img/videos/${v.id}.jpg` })),
+  ].map((v) => ({ ...v, auteur: 'sha22.10', vignette: `/img/videos/${v.id}.jpg`, fichier: `/videos/${v.id}.mp4` })),
 
   // Animations tatouage à l'extérieur (page « Événements »). Uniquement ce que Shannon a dit :
   // rien n'est ajouté ici sans elle.
   evenements: {
     pour: ['Mariages', 'Anniversaires', 'Autres événements privés'],
     tarif: 'Devis à partir de 400 à 500 € minimum',
+    // Le même tarif, découpé pour l'afficher en grand.
+    prix: { avant: 'Devis à partir de', montant: '400 à 500 €', apres: 'minimum' },
+    // Premier message de Shannon : « tarification sur devis, à l'heure ».
+    facturation: 'Sur devis, à l’heure.',
     tarifDetail: 'Tarif variable selon le déplacement et le nombre d’heures.',
     rythme: 'Maximum de 4 tatouages par heure',
     fonctionnement: [

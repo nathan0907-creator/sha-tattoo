@@ -274,19 +274,58 @@ function videoGrid(videos, contact, { limit = 4 } = {}) {
   return html`<ul class="videos">
     ${videos.slice(0, limit).map((v, i) => html`<li class="video" data-reveal data-delay="${i * 80}">
       ${videoPlayer(v, compte)}
-      ${v.titre ? html`<p class="video-titre">${v.titre}</p>` : ''}
     </li>`)}
   </ul>`;
 }
 
-/** Une vidéo TikTok verticale : vignette et bouton lecture ; le lecteur TikTok se charge au clic. */
+/**
+ * Une vidéo verticale : vignette et bouton lecture. La vidéo est lue sur le site même (fichier
+ * MP4 récupéré depuis TikTok) : ni lecteur TikTok, ni ses cookies. À défaut de fichier, le
+ * lecteur TikTok se charge au clic.
+ */
 function videoPlayer(v, compte = '', { lazy = true } = {}) {
-  return html`<div class="video-cadre" data-tiktok="${v.id}">
-    <button type="button" class="video-facade" data-tiktok-play aria-label="Lire la vidéo${v.titre ? ` : ${v.titre}` : ''}">
-      ${v.vignette ? html`<img src="${v.vignette}" alt="" width="540" height="960" ${raw(lazy ? 'loading="lazy"' : 'fetchpriority="high"')} decoding="async">` : ''}
+  const label = `Lire la vidéo${v.titre ? ` : ${v.titre}` : ''}`;
+  const vignette = v.vignette ? html`<img src="${v.vignette}" alt="" width="540" height="960" ${raw(lazy ? 'loading="lazy"' : 'fetchpriority="high"')} decoding="async">` : '';
+  const facade = html`<button type="button" class="video-facade" data-video-play aria-label="${label}">
+      ${vignette}
       <span class="video-play">${icon('play')}</span>
-      <span class="video-marque">${icon('tiktok')}${v.auteur ? `@${v.auteur}` : compte}</span>
-    </button>
+    </button>`;
+  return v.fichier
+    ? html`<div class="video-cadre" data-video>
+      <video src="${v.fichier}" ${v.vignette ? raw(`poster="${escapeHtml(v.vignette)}"`) : ''} preload="none" playsinline loop aria-label="${label}"></video>
+      ${facade}
+    </div>`
+    : html`<div class="video-cadre" data-tiktok="${v.id}">${facade}</div>`;
+}
+
+// ── Animations tatouage (événements) ───────────────────────────────────────
+
+const POUR_ICONES = { Mariages: 'rings', Anniversaires: 'cake' };
+
+/** Pour quels événements : une pastille et une icône par type. */
+const eventsFor = ev => html`<ul class="ev-pour">
+  ${ev.pour.map((name, i) => html`<li class="ev-carte" data-reveal data-delay="${i * 80}">
+    <span class="ev-icone">${icon(POUR_ICONES[name] || 'sparkle')}</span>
+    <h3 class="ev-nom">${name}</h3>
+  </li>`)}
+</ul>`;
+
+/** Comment ça se passe : les étapes, numérotées. */
+const eventsSteps = ev => html`<ol class="ev-etapes">
+  ${ev.fonctionnement.map((step, i) => html`<li data-reveal data-delay="${i * 90}"><span class="ev-num">${String(i + 1).padStart(2, '0')}</span><p>${step}</p></li>`)}
+</ol>`;
+
+/** Les tarifs, en grand : le montant, puis ce qui le fait varier. */
+function eventsPrice(ev, { cta = true } = {}) {
+  return html`<div class="ev-tarifs" data-reveal>
+    <p class="ev-tarifs-titre">Tarifs</p>
+    <p class="ev-montant"><small>${ev.prix.avant}</small><b>${ev.prix.montant}</b><small>${ev.prix.apres}</small></p>
+    <ul class="ev-reperes">
+      ${ev.facturation ? html`<li>${icon('calendar')}<span>${ev.facturation}</span></li>` : ''}
+      <li>${icon('pin')}<span>${ev.tarifDetail}</span></li>
+      <li>${icon('clock')}<span>${ev.rythme}.</span></li>
+    </ul>
+    ${cta ? html`<p class="ev-tarifs-cta">${messageButton('Demander un devis', { evenement: true })}</p>` : ''}
   </div>`;
 }
 
@@ -299,7 +338,6 @@ function videoSection(site, { id = 'videos-titre', title = 'En vidéo', bar, vid
     ${videoGrid(videos, config.contact)}
     <div class="video-pied" data-reveal>
       ${socialLinks(config.contact, { withNames: true })}
-      ${videos.length ? html`<p class="field-hint">Les vidéos sont lues depuis TikTok, qui dépose ses propres cookies quand vous en lancez une.</p>` : ''}
     </div>
   </section>`;
 }
@@ -325,5 +363,5 @@ module.exports = {
   euros, capitalize, telHref, picture, ratioClass, PAGES, edition, folio, weekHours, hoursTable, openDaysSentence,
   openStatusLabel, openBadge, specialtiesTable, availabilityBox, calendarNotices, houseRules, appointmentSentence,
   kicker, sectionBar, stamp, ticker, buttonLabel, button, messageButton, splitTitle,
-  socialLinks, paypalButton, videoGrid, videoSection, videoPlayer, handle,
+  socialLinks, paypalButton, videoGrid, videoSection, videoPlayer, handle, eventsFor, eventsSteps, eventsPrice,
 };
