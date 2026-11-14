@@ -49,6 +49,12 @@
       devis: { prix: 140, acompte: 40, duree: 120, details: 'Traits fins, noir.' }, creneau: { debut: dansJours(9) + 'T14:00', duree: 120 }, acompte: null,
     },
     {
+      id: 'p4', client: 'c3', titre: 'Mariage · ' + dansJours(120).split('-').reverse().join('/'), etape: 'discussion', maj: maintenant - 3 * H, vuSha: 0,
+      infos: { evenement: { type: 'Mariage', date: dansJours(120), lieu: 'Lens', invites: 'Environ 12', duree: '3 heures' } }, flash: null,
+      messages: [msg('client', 'Animation tatouage : mariage\nDate : ' + dansJours(120).split('-').reverse().join('/') + '\nLieu : Lens\nInvités à tatouer : Environ 12\nDurée souhaitée : 3 heures\nNous aimerions des petits flashs autour du thème floral.', 3 * H), msg('systeme', 'Demande envoyée. La réponse et votre devis arriveront ici.', 3 * H)],
+      devis: null, creneau: null, acompte: null,
+    },
+    {
       id: 'p3', client: 'c3', titre: 'Retouche · Poignet', etape: 'confirme', maj: maintenant - 3 * 24 * H, vuSha: 2, parSalon: true,
       infos: null, flash: null,
       messages: [msg('systeme', 'Rendez-vous fixé par le salon : retouche, 30 min.', 72 * H)],
@@ -63,9 +69,10 @@
     nom: 'Sha Tattoo', titreUne: 'Votre tatouage, / _sur mesure_', presentation: 'Traits fins, noir et blanc, ombrages, motifs floraux et lettrages.',
     specialites: 'Tatouage en traits fins (fineline)\nNoir et blanc, ombrages (black and grey)\nProjets personnalisés, floraux et lettrages\nStrass dentaires et blanchiment',
     adresse: '9 Route de Lille', codePostal: '62218', ville: 'Loison-sous-Lens', telephone: '06 50 81 15 32', email: '',
-    instagram: 'https://www.instagram.com/sha_tatt00/', facebook: 'https://www.facebook.com/p/Sha-tattoo-61550087068470/',
+    instagram: 'https://www.instagram.com/sha_tatt00', facebook: 'https://www.facebook.com/share/1Hx7oW4nBN/', tiktok: 'https://www.tiktok.com/@sha22.10',
+    videos: ['7707336491780934944', '7626117253783751958', '7696216766401334561', '7686918937346460960'].map((v) => 'https://www.tiktok.com/@sha22.10/video/' + v).join('\n'),
     h0: '', h1: '', h2: '09:00-12:30 / 13:30-17:00', h3: '13:30-18:00', h4: '09:00-12:30 / 13:30-17:00', h5: '09:00-12:30 / 13:00-17:00', h6: '10:00-12:30 / 13:30-17:00',
-    profil: BASE + '/img/profil.webp', paypal: '', wero: '', conditionsAcompte: 'L’acompte bloque votre créneau et sera déduit du prix final.', identifiant: 'demo',
+    profil: BASE + '/img/profil.webp', paypal: 'https://www.paypal.me/ShannonLouis641', wero: '', conditionsAcompte: 'L’acompte bloque votre créneau et sera déduit du prix final.', identifiant: 'demo',
   };
 
   /* ---------- Les réponses ---------- */

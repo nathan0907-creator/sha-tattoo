@@ -1,12 +1,14 @@
-// Galerie : visionneuse plein écran (clavier, flèches, balayage tactile).
+// Galerie et planches de flashs : visionneuse plein écran (clavier, flèches, balayage tactile).
+// Sur la page des flashs, la visionneuse propose aussi « Demander ce flash ».
 
 const dialog = document.querySelector('[data-lightbox]');
-const thumbs = [...document.querySelectorAll('[data-gallery] .masonry-button')];
+const thumbs = [...document.querySelectorAll('[data-gallery] [data-full]')];
 
 if (dialog && thumbs.length && typeof dialog.showModal === 'function') {
   const image = dialog.querySelector('[data-lightbox-image]');
   const caption = dialog.querySelector('[data-lightbox-caption]');
   const count = dialog.querySelector('[data-lightbox-count]');
+  const action = dialog.querySelector('[data-lightbox-action]');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let index = 0;
 
@@ -15,11 +17,15 @@ if (dialog && thumbs.length && typeof dialog.showModal === 'function') {
     const thumb = thumbs[index];
     const small = thumb.querySelector('img');
 
-    // La vignette déjà chargée s'affiche tout de suite ; la grande photo la remplace dès qu'elle arrive.
+    // La vignette déjà chargée s'affiche tout de suite ; la grande image la remplace dès qu'elle arrive.
     image.src = small.currentSrc || small.src;
     image.alt = thumb.dataset.caption;
     caption.textContent = thumb.dataset.caption;
     count.textContent = `${index + 1} / ${thumbs.length}`;
+    if (action) {
+      action.hidden = !thumb.dataset.flash;
+      if (thumb.dataset.flash) action.dataset.flash = thumb.dataset.flash;
+    }
 
     const full = new Image();
     full.onload = () => {
@@ -45,6 +51,9 @@ if (dialog && thumbs.length && typeof dialog.showModal === 'function') {
     });
   });
 
+  // « Demander ce flash » : la visionneuse se ferme, la messagerie s'ouvre avec le flash joint.
+  if (action) action.addEventListener('click', () => dialog.close());
+
   dialog.querySelector('[data-lightbox-close]').addEventListener('click', () => dialog.close());
   dialog.querySelector('[data-lightbox-prev]').addEventListener('click', previous);
   dialog.querySelector('[data-lightbox-next]').addEventListener('click', next);
@@ -59,8 +68,10 @@ if (dialog && thumbs.length && typeof dialog.showModal === 'function') {
     if (event.key === 'ArrowRight') next();
   });
 
-  // À la fermeture, le focus revient sur la vignette de la photo affichée.
-  dialog.addEventListener('close', () => thumbs[index].focus());
+  // À la fermeture, le focus revient sur la vignette affichée (sauf si la messagerie s'ouvre).
+  dialog.addEventListener('close', () => {
+    if (!document.documentElement.classList.contains('chat-ouvert')) thumbs[index].focus();
+  });
 
   let startX = null;
   dialog.addEventListener('pointerdown', event => {

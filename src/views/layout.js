@@ -7,17 +7,16 @@
 
 const { html, raw, jsonForScript } = require('./html');
 const { icon, sprite } = require('./icons');
-const { PAGES, edition, capitalize, telHref, buttonLabel, appointmentSentence, hoursTable, openBadge } = require('./components');
+const { PAGES, edition, capitalize, telHref, buttonLabel, appointmentSentence, hoursTable, openBadge, socialLinks, paypalButton } = require('./components');
 const { fromMinutes } = require('../time');
 
 const SCHEMA_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-// Les quatre familles de la gazette (les mêmes que chez Cyrille) :
-//   Grand Hotel            le titre et les mots en écriture : une cursive d'enseigne des années trente
-//   League Gothic          les gros titres, en capitales étroites
-//   Old Standard TT        titres secondaires et texte
-//   Archivo Narrow         surtitres, étiquettes, boutons
-const FONTS = 'https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400..700&family=Grand+Hotel&family=League+Gothic&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap';
+// Les trois familles de Sha Tattoo (voir public/css/identite.css) :
+//   Allura                 le nom du salon, en écriture fine et liée
+//   Cormorant Garamond     les titres, fins et contrastés, l'italique en violet
+//   Jost                   le texte, les étiquettes et les boutons
+const FONTS = 'https://fonts.googleapis.com/css2?family=Allura&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@300..600&display=swap';
 
 /** « 07 45 07 50 16 » → « +33745075016 », la forme que lisent les moteurs de recherche. */
 const internationalPhone = phone => {
@@ -30,7 +29,7 @@ function structuredData(site, { crumb = '', trail = [] } = {}) {
   const { config, origin, path } = site;
   const at = target => `${origin}${target}`;
   const hero = config.photos.hero;
-  const links = [config.contact.instagram, config.contact.facebook].filter(Boolean);
+  const links = [config.contact.instagram, config.contact.facebook, config.contact.tiktok].filter(Boolean);
 
   const salon = {
     '@type': 'TattooParlor',
@@ -178,6 +177,7 @@ function footer(site) {
           ${config.booking.appointmentOnly ? html`<p class="ours-rule">${config.booking.appointmentOnly}</p>` : ''}
           <p class="ours-phrase">${appointmentSentence()}.</p>
           ${openBadge(status)}
+          ${socialLinks(contact, { className: 'ours-reseaux' })}
         </div>
         <div class="ours-col">
           <h2 class="ours-title">Adresse</h2>
@@ -194,9 +194,13 @@ function footer(site) {
             <li><button type="button" class="link" data-ouvrir-chat>Écrire un message</button></li>
             ${contact.phone ? html`<li><a class="link" href="${telHref(contact.phone)}">${contact.phone}</a></li>` : ''}
             ${contact.email ? html`<li><a class="link" href="mailto:${contact.email}">${contact.email}</a></li>` : ''}
-            ${contact.instagram ? html`<li><a class="link" href="${contact.instagram}" target="_blank" rel="noopener">Instagram</a></li>` : ''}
-            ${contact.facebook ? html`<li><a class="link" href="${contact.facebook}" target="_blank" rel="noopener">Facebook</a></li>` : ''}
+            <li><a class="link" href="/evenements">Animations tatouage</a></li>
           </ul>
+          ${contact.paypal ? html`<div class="ours-paiement">
+            <h2 class="ours-title">Paiement</h2>
+            ${paypalButton(contact, { variant: 'btn--small' })}
+            <p class="ours-note">Pour l'acompte, indiquez la référence de votre devis.</p>
+          </div>` : ''}
         </div>
       </div>
       <div class="container ours-bottom">
@@ -287,6 +291,7 @@ ${preload && preload.src ? html`<link rel="preload" as="image" href="${preload.s
 <link rel="stylesheet" href="/css/base.css">
 ${styles.map(href => html`<link rel="stylesheet" href="${href}">`)}
 <link rel="stylesheet" href="/css/messages.css">
+<link rel="stylesheet" href="/css/identite.css">
 <script src="/js/boot.js"></script>
 ${bare || !origin ? '' : html`<script type="application/ld+json">${jsonForScript(structuredData({ ...site, origin }, { crumb, trail }))}</script>`}
 </head>

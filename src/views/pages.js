@@ -4,13 +4,14 @@
 // mêmes encadrés. « La carte » des tarifs devient « Les flashs » ; la réservation en ligne
 // laisse la place à la messagerie (devis, puis rendez-vous).
 
-const { html } = require('./html');
+const { html, raw } = require('./html');
 const { icon } = require('./icons');
 const { layout } = require('./layout');
-const { flashCard, appointmentFlyer } = require('./home');
+const { appointmentFlyer } = require('./home');
 const {
-  PAGES, folio, picture, button, buttonLabel, splitTitle, kicker, stamp, telHref, ratioClass,
+  PAGES, folio, picture, button, buttonLabel, splitTitle, kicker, stamp, telHref, ratioClass, euros, messageButton,
   houseRules, appointmentSentence, hoursTable, openBadge, specialtiesTable, calendarNotices, availabilityBox,
+  socialLinks, paypalButton, videoSection,
 } = require('./components');
 
 /** L'encadré « À noter » : fermetures et horaires exceptionnels à venir. */
@@ -36,6 +37,140 @@ function pageHead(site, { path, kick, title, deck, extra = '' }) {
 /** Rubrique encore vide : rien n'est inventé, on annonce simplement la suite. */
 const comingSoon = text => html`<p class="a-paraitre" data-reveal><strong>À paraître.</strong> ${text}</p>`;
 
+const FLASH_INTRO = "Des projets dessinés de A à Z au salon. Ils ne sont pas faits à la demande, mais peuvent être modifiés et placés sur la zone de votre choix. Chaque pièce n'est réalisée qu'une seule fois.";
+
+/** La visionneuse plein écran (galerie et planches de flashs) : flèches, clavier, balayage. */
+const lightbox = ({ what = 'photo', action = false } = {}) => html`<dialog class="lightbox" data-lightbox aria-label="${what === 'photo' ? 'Photo agrandie' : 'Planche agrandie'}">
+  <button type="button" class="icon-btn lightbox-close" data-lightbox-close aria-label="Fermer">${icon('close')}</button>
+  <button type="button" class="icon-btn lightbox-nav lightbox-prev" data-lightbox-prev aria-label="${what === 'photo' ? 'Photo précédente' : 'Planche précédente'}">${icon('chevron-left')}</button>
+  <figure class="lightbox-figure">
+    <img data-lightbox-image alt="">
+    <figcaption><span data-lightbox-caption></span><span class="lightbox-count" data-lightbox-count></span></figcaption>
+    ${action ? html`<p class="lightbox-action"><button type="button" class="btn btn--accent btn--small" data-ouvrir-chat data-lightbox-action hidden>${buttonLabel('Demander ce flash')}${icon('arrow-right')}</button></p>` : ''}
+  </figure>
+  <button type="button" class="icon-btn lightbox-nav lightbox-next" data-lightbox-next aria-label="${what === 'photo' ? 'Photo suivante' : 'Planche suivante'}">${icon('chevron-right')}</button>
+</dialog>`;
+
+// ── Page 3 — Les flashs : les planches ─────────────────────────────────────
+
+/** Une planche : l'image (qui s'agrandit), son nom, son prix indicatif, et de quoi la demander. */
+function flashBoard(flash, i) {
+  const caption = flash.title || flash.alt;
+  return html`<li class="planche ${flash.available === false ? 'is-taken' : ''} ${flash.exemple ? 'planche--exemple' : ''}" data-reveal data-delay="${(i % 3) * 70}">
+    <button type="button" class="planche-image" data-full="${flash.src}" data-caption="${caption}" ${flash.exemple || flash.available === false ? '' : raw(`data-flash="${flash.id}"`)} data-cursor="Voir" aria-label="Agrandir : ${caption}">
+      ${picture(flash)}
+      ${flash.available === false ? html`<span class="flash-taken">Déjà tatoué</span>` : ''}
+    </button>
+    ${flash.exemple ? '' : html`<div class="planche-pied">
+      <div>
+        ${flash.title ? html`<h2 class="planche-nom">${flash.title}</h2>` : ''}
+        ${flash.price ? html`<p class="planche-prix">dès <b>${euros(flash.price)}</b></p>` : ''}
+      </div>
+      ${flash.available === false
+        ? html`<p class="planche-prix">Plus disponible</p>`
+        : messageButton('Demander', { variant: 'btn--small', flash: flash.id })}
+    </div>`}
+  </li>`;
+}
+
+function flashsPage(site) {
+  const { config, flashs } = site;
+  const planches = flashs.length ? flashs : config.flashsExemple;
+  const body = html`
+<main id="contenu" class="page">
+  ${pageHead(site, {
+    path: '/flashs',
+    kick: 'Planches de flashs',
+    title: ['Les', '_flashs_'],
+    deck: FLASH_INTRO,
+  })}
+  <div class="container">
+    <p class="notice-line" data-reveal>${icon('info')}<span>Touchez une planche pour la voir en grand, puis passez à la suivante.${flashs.length ? ' Un motif vous plaît ? Demandez-le : il ne sera tatoué qu’une fois.' : ''}</span></p>
+    <ul class="planches" data-gallery>${planches.map((flash, i) => flashBoard(flash, i))}</ul>
+  </div>
+  ${lightbox({ what: 'planche', action: true })}
+  <aside class="container help-band" data-reveal>
+    <p><strong>Une idée à vous&nbsp;?</strong> <button type="button" class="link" data-ouvrir-chat>Demandez un devis</button>.</p>
+  </aside>
+</main>`;
+
+  return layout(site, {
+    title: 'Flashs de tatouage',
+    crumb: 'Les flashs',
+    description: `Les planches de flashs de ${config.name}, ${config.trade.toLowerCase()} à ${config.address.city} : des motifs dessinés au salon, chacun tatoué une seule fois.`,
+    body,
+    styles: ['/css/pages.css'],
+    scripts: ['/js/gallery.js'],
+  });
+}
+
+// ── Page 5 — Événements : l'animation tatouage ─────────────────────────────
+
+const POUR_ICONES = { Mariages: 'rings', Anniversaires: 'cake' };
+
+function eventsPage(site) {
+  const { config } = site;
+  const ev = config.evenements;
+  const body = html`
+<main id="contenu" class="page page-evenements">
+  ${pageHead(site, {
+    path: '/evenements',
+    kick: 'Animations tatouage',
+    title: ['Le tatouage', "_s'invite à la fête_"],
+    deck: 'Une animation tatouage le jour de votre événement privé : une expérience originale et personnalisée, que vos invités gardent pour toujours.',
+    extra: html`<p class="actions" data-reveal>${messageButton('Demander un devis', { evenement: true })}</p>`,
+  })}
+
+  <section class="container section" aria-labelledby="pour-titre">
+    <h2 class="menu-group-title" id="pour-titre" data-reveal>Pour quels événements</h2>
+    <ul class="ev-pour" data-stagger>
+      ${ev.pour.map(name => html`<li class="ev-carte" data-reveal>
+        <span class="ev-icone">${icon(POUR_ICONES[name] || 'sparkle')}</span>
+        <h3 class="ev-nom">${name}</h3>
+      </li>`)}
+    </ul>
+  </section>
+
+  <section class="ev-bande" aria-labelledby="deroule-titre">
+    <div class="container ev-bande-grille">
+      <div>
+        <p class="kicker" data-reveal>Le jour J</p>
+        <h2 class="headline headline--l" id="deroule-titre" data-reveal="lines">${splitTitle(['Comment', '_ça se passe_'])}</h2>
+      </div>
+      <ol class="ev-etapes">
+        ${ev.fonctionnement.map((step, i) => html`<li data-reveal data-delay="${i * 90}"><span class="ev-num">${String(i + 1).padStart(2, '0')}</span><p>${step}</p></li>`)}
+      </ol>
+    </div>
+  </section>
+
+  <section class="container section" aria-labelledby="tarif-titre">
+    <h2 class="menu-group-title" id="tarif-titre" data-reveal>Le tarif</h2>
+    <div class="ev-tarif">
+      <div class="ev-prix" data-reveal>
+        <p class="ev-prix-montant">${ev.tarif}</p>
+        <p>${ev.tarifDetail}</p>
+      </div>
+      <ul class="ev-reperes" data-reveal data-delay="120">
+        <li>${icon('clock')}<span>${ev.rythme}.</span></li>
+        <li>${icon('pin')}<span>Le déplacement compte dans le devis&nbsp;: indiquez le lieu de l’événement.</span></li>
+      </ul>
+      <div class="ev-cta" data-reveal data-delay="200">
+        ${messageButton('Demander un devis', { evenement: true })}
+        <p class="field-hint">Indiquez le type d’événement, la date et le lieu&nbsp;: le devis arrive dans vos messages.</p>
+      </div>
+    </div>
+  </section>
+</main>`;
+
+  return layout(site, {
+    title: 'Animation tatouage : mariages, anniversaires',
+    crumb: 'Événements',
+    description: `Animation tatouage par ${config.name} pour les mariages, anniversaires et autres événements privés. ${ev.tarif}.`,
+    body,
+    styles: ['/css/pages.css'],
+  });
+}
+
 // ── Page 2 — La carte : spécialités et flashs ──────────────────────────────
 
 function carte(site) {
@@ -55,10 +190,13 @@ function carte(site) {
     </section>
     <section class="menu-group" id="flashs" aria-labelledby="flashs-titre">
       <h2 class="menu-group-title" id="flashs-titre" data-reveal>Les flashs</h2>
-      <p class="flash-intro" data-reveal>Des projets dessinés de A à Z au salon. Ils ne sont pas faits à la demande, mais peuvent être modifiés et placés sur la zone de votre choix. Chaque pièce n'est réalisée qu'une seule fois. Touchez une planche pour voir le motif de plus près.</p>
-      ${flashs.length
-        ? html`<ul class="flash-list" data-stagger>${flashs.map(flash => flashCard(flash))}</ul>`
-        : comingSoon('Les planches de flashs seront publiées ici.')}
+      <p class="flash-intro" data-reveal>${FLASH_INTRO}</p>
+      <p class="actions" data-reveal>${button(flashs.length ? `Voir les ${flashs.length} planche${flashs.length > 1 ? 's' : ''}` : 'Voir les planches', '/flashs', { variant: 'btn--outline' })}</p>
+    </section>
+    <section class="menu-group" aria-labelledby="evenements-carte-titre">
+      <h2 class="menu-group-title" id="evenements-carte-titre" data-reveal>Animations tatouage</h2>
+      <p class="flash-intro" data-reveal>${config.evenements.pour.join(', ')}. ${config.evenements.tarif}.</p>
+      <p class="actions" data-reveal>${button('Découvrir', '/evenements', { variant: 'btn--outline' })}</p>
     </section>
   </div>
   <div class="container">${houseRules(config)}</div>
@@ -97,24 +235,17 @@ function gallery(site) {
       </li>`)}
     </ul>` : comingSoon('Les premières réalisations seront publiées ici.')}
   </div>
-  <dialog class="lightbox" data-lightbox aria-label="Photo agrandie">
-    <button type="button" class="icon-btn lightbox-close" data-lightbox-close aria-label="Fermer">${icon('close')}</button>
-    <button type="button" class="icon-btn lightbox-nav lightbox-prev" data-lightbox-prev aria-label="Photo précédente">${icon('chevron-left')}</button>
-    <figure class="lightbox-figure">
-      <img data-lightbox-image alt="">
-      <figcaption><span data-lightbox-caption></span><span class="lightbox-count" data-lightbox-count></span></figcaption>
-    </figure>
-    <button type="button" class="icon-btn lightbox-nav lightbox-next" data-lightbox-next aria-label="Photo suivante">${icon('chevron-right')}</button>
-  </dialog>
+  ${videoSection(site, { id: 'galerie-videos' })}
+  ${lightbox()}
 </main>`;
 
   return layout(site, {
     title: 'Tatouages en photos',
     crumb: 'En images',
-    description: `Les réalisations de ${config.name}, ${config.trade.toLowerCase()} à ${config.address.city}, en photos.`,
+    description: `Les réalisations de ${config.name}, ${config.trade.toLowerCase()} à ${config.address.city}, en photos et en vidéos.`,
     body,
     styles: ['/css/pages.css'],
-    scripts: photos.length ? ['/js/gallery.js'] : [],
+    scripts: [...(photos.length ? ['/js/gallery.js'] : []), ...(site.videos.length ? ['/js/videos.js'] : [])],
   });
 }
 
@@ -147,6 +278,13 @@ function appointment(site) {
       ${annonces.length ? html`<ul class="briefs">${calendarNotices(annonces)}</ul>` : ''}
       ${button('Itinéraire', config.maps.directions, { variant: 'btn--outline', iconName: 'arrow-up-right', external: true })}
     </div>
+
+    <section class="box acompte-box" aria-labelledby="acompte-titre" data-reveal data-delay="160">
+      <h2 class="box-title" id="acompte-titre">L'acompte</h2>
+      <p>${config.booking.rule} Il se règle après le devis${config.contact.paypal ? ', par PayPal,' : ''} par Wero ou au salon.</p>
+      ${config.contact.paypal ? html`${paypalButton(config.contact)}
+      <p class="field-hint">Indiquez la référence de votre devis (elle est dans vos messages). Le lien exact, avec le bon montant, vous est aussi donné avec le devis.</p>` : ''}
+    </section>
   </div>
 </main>`;
 
@@ -184,13 +322,9 @@ function find(site) {
           <dt>E-mail</dt>
           <dd><a class="link" href="mailto:${contact.email}">${contact.email}</a></dd>
         </div>` : ''}
-        ${contact.instagram ? html`<div>
-          <dt>Sur Instagram</dt>
-          <dd><a class="link" href="${contact.instagram}" target="_blank" rel="noopener">Le compte du salon</a></dd>
-        </div>` : ''}
-        ${contact.facebook ? html`<div>
-          <dt>Sur Facebook</dt>
-          <dd><a class="link" href="${contact.facebook}" target="_blank" rel="noopener">La page du salon</a></dd>
+        ${contact.instagram || contact.tiktok || contact.facebook ? html`<div>
+          <dt>Réseaux</dt>
+          <dd>${socialLinks(contact, { withNames: true })}</dd>
         </div>` : ''}
         ${config.booking.appointmentOnly ? html`<div>
           <dt>Accueil</dt>
@@ -346,6 +480,7 @@ function privacy(site) {
       <p>Ce site ne dépose aucun cookie publicitaire ni de mesure d'audience. Les seuls cookies qu'il utilise gardent votre compte connecté (et la tatoueuse connectée à son espace)&nbsp;: ils sont nécessaires à la messagerie.</p>
       <p>Le plan de la page Pratique est fourni par Google Maps, qui dépose ses propres cookies. Il ne s'affiche donc que si vous l'acceptez. Votre choix est gardé six mois dans votre navigateur et se modifie quand vous voulez&nbsp;:</p>
       <p><button type="button" class="btn btn--outline" data-cookies-open><span>Modifier mon choix</span></button></p>
+      <p>Les vidéos TikTok ne se chargent que si vous en lancez une&nbsp;: TikTok dépose alors ses propres cookies. Les liens vers Instagram, TikTok, Facebook et PayPal ouvrent ces sites, qui appliquent leurs propres règles.</p>
       <p>Les polices de caractères sont servies par Google Fonts, qui reçoit à cette occasion l'adresse IP de votre appareil, sans déposer de cookie.</p>
     </section>
   </div>
@@ -437,7 +572,9 @@ function salon(site) {
 const pages = {
   '/': require('./home').home,
   '/prestations': carte,
+  '/flashs': flashsPage,
   '/galerie': gallery,
+  '/evenements': eventsPage,
   '/rendez-vous': appointment,
   '/nous-trouver': find,
   '/mentions-legales': legal,

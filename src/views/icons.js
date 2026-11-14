@@ -48,6 +48,15 @@ const PATHS = {
   rotate: '<path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v4.5h-4.5"/>',
   // La machine à tatouer, aiguille en bas à gauche : elle trace la ligne de l'intro.
   machine: '<path d="M15 3h4a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 19 9h-4zM15 4H8a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h7M7 9l-2 6h4l1-6M5 15l.5 4h3l.5-4M7 19v4M19 9v3M17 9v2"/>',
+  // Réseaux, paiement, vidéos, événements.
+  facebook: '<path d="M14.5 21v-7.2h2.6l.4-3.1h-3V8.8c0-.9.3-1.5 1.6-1.5h1.6V4.5a20 20 0 0 0-2.4-.1c-2.4 0-4 1.4-4 4.1v2.2H8.6v3.1h2.7V21"/>',
+  tiktok: '<path d="M13.5 3.5v11.3a3.3 3.3 0 1 1-3.3-3.3"/><path d="M13.5 3.5c.5 2.6 2.3 4.3 5 4.5"/>',
+  paypal: '<path d="M7.2 20.5 9.8 3.5h5.4a3.9 3.9 0 0 1 0 7.8h-3.6l-1.4 9.2z"/><path d="M11.6 11.3h3.3a3.6 3.6 0 0 0 3.5-3"/>',
+  play: '<path d="M8.5 5.8v12.4L18.3 12z"/>',
+  sparkle: '<path d="M12 3.5c.6 4.4 1.8 5.9 5.8 6.5-4 .6-5.2 2.1-5.8 6.5-.6-4.4-1.8-5.9-5.8-6.5 4-.6 5.2-2.1 5.8-6.5zM18.5 15.5c.3 1.9.8 2.5 2.5 2.8-1.7.3-2.2.9-2.5 2.7-.3-1.8-.8-2.4-2.5-2.7 1.7-.3 2.2-.9 2.5-2.8z"/>',
+  rings: '<circle cx="9" cy="14" r="5.5"/><circle cx="15" cy="14" r="5.5"/><path d="m10.5 5 1.5-2 1.5 2-1.5 1.5z"/>',
+  cake: '<path d="M4.5 20.5v-7a1.5 1.5 0 0 1 1.5-1.5h12a1.5 1.5 0 0 1 1.5 1.5v7M3 20.5h18M4.5 16c1.2 1 2.5 1 3.7 0s2.5-1 3.8 0 2.5 1 3.7 0 2.6-1 3.8 0M12 12V8.5M12 6.2c-.8-.7-.8-1.7 0-2.7.8 1 .8 2 0 2.7z"/>',
+  needle: '<path d="M4 20 15.5 8.5M14 5l5 5M16.5 2.5l5 5M12.5 10.5l1 1"/>',
 };
 
 /** Planche d'icônes, incluse une fois par page ; chaque icône s'utilise ensuite par <use>. */

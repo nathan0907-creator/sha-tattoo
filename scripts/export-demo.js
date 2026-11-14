@@ -30,7 +30,7 @@ console.log = () => {};
 const { gerer } = require(path.join(racine, 'server.js'));
 console.log = log;
 
-const PAGES = ['/', '/prestations', '/galerie', '/rendez-vous', '/nous-trouver', '/mentions-legales', '/confidentialite', '/conditions', '/salon'];
+const PAGES = ['/', '/prestations', '/flashs', '/galerie', '/evenements', '/rendez-vous', '/nous-trouver', '/mentions-legales', '/confidentialite', '/conditions', '/salon'];
 
 /** Les adresses du site (« /prestations », « /img/profil.webp ») deviennent celles de la démo (« /sha-tattoo/… »). */
 function adapter(html) {

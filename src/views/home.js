@@ -6,7 +6,7 @@ const { layout } = require('./layout');
 const {
   PAGES, picture, button, messageButton, splitTitle, kicker, sectionBar, stamp, ticker, edition, capitalize,
   ratioClass, houseRules, appointmentSentence, euros, openBadge, hoursTable, openDaysSentence, specialtiesTable,
-  calendarNotices, availabilityBox,
+  calendarNotices, availabilityBox, videoSection, videoPlayer,
 } = require('./components');
 
 const { addDays: addDaysISO } = require('../time');
@@ -26,6 +26,8 @@ function home(site) {
   const available = flashs.filter(flash => flash.available);
   // La grande image de la une : la dernière réalisation publiée, sinon le dernier flash disponible.
   const hero = photos.hero || available[0] || null;
+  // À la une : la première vidéo TikTok (la plus likée) ; les suivantes vont plus bas, « En vidéo ».
+  const [top, ...otherVideos] = site.videos;
 
   // Fermetures et horaires exceptionnels en tête du bandeau, comme les congés chez Cyrille.
   const tickerItems = [
@@ -71,7 +73,12 @@ function home(site) {
       <h1 class="headline headline--xl" id="une-titre" data-reveal="lines" data-delay="150" data-fit>${splitTitle(config.headline)}</h1>
     </div>
 
-    ${hero ? html`<figure class="lead-photo ${ratioClass(hero)}">
+    ${top ? html`<figure class="lead-photo lead-video">
+      <div class="frame frame--whole" data-reveal="settle" data-delay="300">
+        <div class="frame-inner">${videoPlayer(top, '', { lazy: false })}</div>
+      </div>
+      <figcaption class="lead-video-titre">${icon('tiktok')}<span>${top.titre || 'La vidéo à la une'}</span></figcaption>
+    </figure>` : hero ? html`<figure class="lead-photo ${ratioClass(hero)}">
       <div class="frame frame--whole" data-reveal="settle" data-delay="300">
         <div class="frame-inner">${picture(hero, { lazy: false })}</div>
       </div>
@@ -116,7 +123,7 @@ function home(site) {
   ${config.specialties.length ? html`<section class="container section" aria-labelledby="carte-titre">
     ${sectionBar('carte-titre', 'La carte', pageOf('/prestations'))}
     ${specialtiesTable(config.specialties, 'Les spécialités du salon')}
-    ${flashs.length ? html`<p class="section-foot" data-reveal>${button('Voir les flashs', '/prestations#flashs', { variant: 'btn--outline' })}</p>` : ''}
+    <p class="section-foot" data-reveal>${button('Voir les flashs', '/flashs', { variant: 'btn--outline' })}</p>
   </section>` : ''}
 
   ${gallery.length ? html`<section class="hgallery" aria-labelledby="images-titre" data-scrub="pin" data-hgallery>
@@ -132,12 +139,16 @@ function home(site) {
             </figure>
           </li>`)}
           <li class="hgallery-item hgallery-item--end">
-            ${stamp('Page 3 · En images · Page 3 · ', { id: 'tampon-images', href: '/galerie', label: 'Voir toute la galerie, page 3', className: 'stamp--cta', attrs: 'data-magnetic' })}
+            ${stamp(`Page ${pageOf('/galerie').number} · En images · Page ${pageOf('/galerie').number} · `, { id: 'tampon-images', href: '/galerie', label: `Voir toute la galerie, page ${pageOf('/galerie').number}`, className: 'stamp--cta', attrs: 'data-magnetic' })}
           </li>
         </ul>
       </div>
     </div>
   </section>` : ''}
+
+  ${eventsTeaser(config)}
+
+  ${!top || otherVideos.length ? videoSection(site, { id: 'videos-une', videos: otherVideos, bar: (id, title) => sectionBar(id, title, pageOf('/galerie')) }) : ''}
 
   <section class="container section" aria-labelledby="annonces-titre">
     ${sectionBar('annonces-titre', 'Prendre rendez-vous', pageOf('/rendez-vous'))}
@@ -170,8 +181,32 @@ function home(site) {
     body,
     bodyClass: 'page-une',
     styles: ['/css/pages.css'],
-    preload: hero,
+    scripts: site.videos.length ? ['/js/videos.js'] : [],
+    preload: top ? (top.vignette ? { src: top.vignette } : null) : hero,
   });
+}
+
+/** La bande « Animations tatouage » de la une : à qui, le tarif, et de quoi demander un devis. */
+function eventsTeaser(config) {
+  const ev = config.evenements;
+  if (!ev) return '';
+  return html`<section class="ev-bande ev-bande--une" aria-labelledby="ev-une-titre">
+    <div class="container ev-bande-grille">
+      <div>
+        <p class="kicker" data-reveal>Animations tatouage · page ${pageOf('/evenements').number}</p>
+        <h2 class="headline headline--l" id="ev-une-titre" data-reveal="lines">${splitTitle(['Le tatouage', "_s'invite à la fête_"])}</h2>
+      </div>
+      <div class="ev-bande-texte" data-reveal data-delay="120">
+        <p class="ev-bande-pour">${ev.pour.join(' · ')}</p>
+        <p>Une expérience originale et personnalisée pour votre événement privé. ${ev.fonctionnement[1]}</p>
+        <p class="ev-bande-prix">${ev.tarif}</p>
+        <p class="actions">
+          ${messageButton('Demander un devis', { evenement: true })}
+          ${button('Découvrir', '/evenements', { variant: 'btn--outline btn--clair' })}
+        </p>
+      </div>
+    </div>
+  </section>`;
 }
 
 /**

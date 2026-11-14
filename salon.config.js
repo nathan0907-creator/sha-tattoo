@@ -25,8 +25,34 @@ module.exports = {
   contact: {
     phone: '06 50 81 15 32',
     email: '',
-    instagram: 'https://www.instagram.com/sha_tatt00/',
-    facebook: 'https://www.facebook.com/p/Sha-tattoo-61550087068470/',
+    instagram: 'https://www.instagram.com/sha_tatt00',
+    facebook: 'https://www.facebook.com/share/1Hx7oW4nBN/',
+    tiktok: 'https://www.tiktok.com/@sha22.10',
+    // Lien PayPal.me : l'acompte (avec le montant exact) et le bouton « Payer par PayPal » du site.
+    paypal: 'https://www.paypal.me/ShannonLouis641',
+  },
+
+  // Les vidéos TikTok du site, dans l'ordre d'affichage : la première est à la une (la plus likée
+  // au 14 novembre 2026 : 323 j'aime), les autres plus bas. Shannon les change dans Réglages.
+  videos: [
+    { id: '7707336491780934944', titre: 'De la PMA au tattoo personnalisé' },
+    { id: '7626117253783751958', titre: 'Joli dos floral' },
+    { id: '7696216766401334561', titre: 'Une jolie lionne' },
+    { id: '7686918937346460960', titre: 'Des fleurs et surtout de la fineline' },
+  ].map((v) => ({ ...v, auteur: 'sha22.10', vignette: `/img/videos/${v.id}.jpg` })),
+
+  // Animations tatouage à l'extérieur (page « Événements »). Uniquement ce que Shannon a dit :
+  // rien n'est ajouté ici sans elle.
+  evenements: {
+    pour: ['Mariages', 'Anniversaires', 'Autres événements privés'],
+    tarif: 'Devis à partir de 400 à 500 € minimum',
+    tarifDetail: 'Tarif variable selon le déplacement et le nombre d’heures.',
+    rythme: 'Maximum de 4 tatouages par heure',
+    fonctionnement: [
+      'Possibilité de créer des planches de flash personnalisées pour l’événement.',
+      'Les invités ne paient rien individuellement.',
+      'Chaque invité doit simplement remplir un formulaire de consentement le jour de l’événement.',
+    ],
   },
 
   // Même bâtiment que L'atelier de Cyrille.
@@ -48,6 +74,42 @@ module.exports = {
     ratio: i % 3 === 1 ? '4/5' : i % 3 === 2 ? '1/1' : '3/4',
     width: i % 3 === 1 ? 640 : i % 3 === 2 ? 700 : 600,
     height: i % 3 === 2 ? 700 : 800,
+  })),
+  // Les planches de flashs de Shannon (dossier « photo », 14 novembre 2026), dans public/img/flashs.
+  // Ajoutées une seule fois à la galerie : Shannon les renomme, les marque « déjà tatoué » ou les
+  // retire ensuite depuis son espace, comme celles qu'elle publie elle-même.
+  flashsDepart: [
+    ['flash-01.jpg', 'Fleurs de naissance, juillet à décembre', 452, 640],
+    ['flash-02.jpg', 'Bouquet fleuri', 226, 320],
+    ['flash-03.jpg', 'Léopard et fleurs', 226, 320],
+    ['flash-04.jpg', 'Super-héros', 339, 480],
+    ['flash-05.jpg', 'Lys en traits fins', 452, 640],
+    ['flash-06.jpg', 'Personnages de dessins animés', 339, 480],
+    ['flash-07.jpg', 'Joker', 339, 480],
+    ['flash-08.jpg', 'Fées', 452, 640],
+    ['flash-09.jpg', 'Ornements fins', 452, 640],
+    ['flash-10.jpg', 'Ornements et lettrages', 339, 480],
+    ['flash-11.jpg', 'Petits motifs', 339, 480],
+    ['flash-12.jpg', 'Fleurs de naissance, janvier à juin', 452, 640],
+    ['flash-13.jpg', 'Ornements', 339, 480],
+    ['flash-14.jpg', 'Fleurs et océan', 226, 320],
+    ['flash-15.jpg', 'Mandala', 339, 480],
+    ['flash-16.jpg', 'Branche ornementale', 339, 480],
+    ['flash-17.jpg', 'Branche fine', 566, 800],
+    ['flash-18.jpg', 'Petits motifs et lettrages', 339, 480],
+    ['flash-19.jpg', 'Ornement solaire', 452, 640],
+    ['flash-20.jpg', 'Venom', 226, 320],
+  ].map(([fichier, titre, largeur, hauteur]) => ({ src: `/img/flashs/${fichier}`, titre, largeur, hauteur })),
+
+  // Même chose pour la page des flashs : des planches « exemple » tant qu'aucune n'est publiée.
+  flashsExemple: [1, 2, 3].map((i) => ({
+    src: `/img/exemples/planche-${i}.svg`,
+    alt: `Exemple : planche de flashs ${i}, à changer`,
+    title: '',
+    ratio: '3/4',
+    width: 600,
+    height: 800,
+    exemple: true,
   })),
 
   timezone: 'Europe/Paris',

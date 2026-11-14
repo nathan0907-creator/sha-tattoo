@@ -1,0 +1,1154 @@
+/*
+ * L'identité de Sha Tattoo.
+ *
+ * La mise en page (une, pages numérotées, encadrés, intro) vient de la base commune ; cette
+ * feuille, chargée en dernier, lui donne la voix de Sha : celle du trait fin.
+ *   Allura               le nom du salon, une écriture fine et liée, comme un lettrage fineline
+ *   Cormorant Garamond   les titres : un romain à fort contraste, fin et élégant, l'italique en violet
+ *   Jost                 le texte, les étiquettes et les boutons : net, moderne, aéré
+ * Les filets gras du journal deviennent des traits fins ; les boutons s'arrondissent ; un brin
+ * dessiné au trait signe les rubriques ; les photos ont un second trait, décalé, en violet.
+ */
+
+:root {
+  --font-name: "Allura", "Segoe Script", cursive;
+  --font-poster: "Cormorant Garamond", "Cormorant", Garamond, Georgia, serif;
+  --font-head: "Cormorant Garamond", "Cormorant", Garamond, Georgia, serif;
+  --font-text: "Jost", "Futura", "Century Gothic", "Segoe UI", sans-serif;
+  --font-label: "Jost", "Futura", "Century Gothic", "Segoe UI", sans-serif;
+
+  --line: rgba(44, 32, 56, .2);     /* le trait fin des encadrés */
+  --line-strong: rgba(44, 32, 56, .55);
+  --violet-soft: #e9dff0;
+  --radius: 999px;
+
+  /* Le brin au trait : la signature des rubriques. */
+  --brin: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 24' fill='none' stroke='%23000' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 20C18 18 34 12 60 4.5'/%3E%3Cpath d='M14 17.6c1-4 4-6.5 8-6.6-1 3.6-4 6-8 6.6zM26 14.2c-.4-4 1.6-7.1 5.6-8.5.4 3.8-1.6 7-5.6 8.5zM38.5 10.6c1.5-3.6 4.8-5.3 8.6-4.6-1.5 3.4-4.8 5.2-8.6 4.6zM21.6 15.6c-3.4-1.9-4.9-4.7-4.3-8.1 3.1 1.7 4.6 4.6 4.3 8.1zM33.8 12.2c-3-2.4-3.8-5.4-2.6-8.6 2.8 2.2 3.8 5.3 2.6 8.6z'/%3E%3Ccircle cx='60.5' cy='4.2' r='1.9'/%3E%3C/svg%3E");
+}
+
+body {
+  font-size: 1.0625rem;
+  font-weight: 400;
+  line-height: 1.62;
+  letter-spacing: .005em;
+}
+
+/* ── Titres ─────────────────────────────────────────────────────────────── */
+
+h1, h2, h3 {
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.headline {
+  font-weight: 400;
+  letter-spacing: .01em;
+  line-height: .98;
+}
+
+/* Le mot fort : en italique, en violet (et non plus en écriture d'enseigne). */
+.headline em {
+  font-family: var(--font-head);
+  font-size: 1em;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  padding-inline: .02em;
+}
+
+.headline .line > .w:first-child em {
+  margin-left: 0;
+}
+
+.headline:has(.line:last-child em),
+.headline:has(> em) {
+  padding-bottom: .08em;
+}
+
+.headline--xl { font-size: clamp(2.9rem, 7.6vw, 7rem); }
+.headline--l { font-size: clamp(2.3rem, 5vw, 4.4rem); }
+.lead .headline--xl { --fit-max: 7.5rem; font-size: clamp(2.6rem, 11vw, 7rem); }
+
+.headline--m,
+.headline--s {
+  font-weight: 600;
+}
+
+.headline--m { font-size: clamp(1.8rem, 3.2vw, 2.6rem); }
+.headline--s { font-size: 1.75rem; }
+
+/* Surtitre : un losange fin plutôt qu'un pavé */
+.kicker,
+.eyebrow {
+  gap: .7rem;
+  font-size: .8rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+}
+
+.kicker::before,
+.eyebrow::before {
+  width: .5rem;
+  height: .5rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  transform: rotate(45deg);
+}
+
+.deck {
+  font-family: var(--font-head);
+  font-size: clamp(1.35rem, 2.3vw, 1.75rem);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.dropcap > p:first-child::first-letter {
+  padding: .06em .12em 0 0;
+  color: var(--gold-display);
+  font-family: var(--font-head);
+  font-size: 4.2em;
+  font-style: italic;
+  font-weight: 500;
+  line-height: .8;
+}
+
+.columns {
+  column-rule-color: var(--line);
+}
+
+/* ── Filets : du gras du journal au trait fin ───────────────────────────── */
+
+.folio,
+.masthead-line {
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line);
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+}
+
+.masthead-line::before {
+  display: none;
+}
+
+.section-bar {
+  align-items: center;
+  padding-block: .8rem .7rem;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line);
+}
+
+.section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: .8rem;
+  font-family: var(--font-head);
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+  font-weight: 500;
+  letter-spacing: .02em;
+  text-transform: none;
+}
+
+/* Le brin au trait, devant chaque rubrique */
+.section-title::before,
+.menu-group-title::before {
+  content: "";
+  flex: none;
+  width: 2.6rem;
+  height: 1rem;
+  background: var(--gold);
+  -webkit-mask: var(--brin) center / contain no-repeat;
+  mask: var(--brin) center / contain no-repeat;
+}
+
+.section-note {
+  font-size: .8rem;
+  font-weight: 500;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.menu-group-title {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding-block: .8rem .2rem;
+  border-top: 1px solid var(--line-strong);
+  font-family: var(--font-head);
+  font-size: clamp(1.6rem, 2.8vw, 2.1rem);
+  font-weight: 500;
+  letter-spacing: .01em;
+  text-transform: none;
+}
+
+.house-rule {
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.pager {
+  border-top: 1px solid var(--line-strong);
+  border-bottom-color: var(--line);
+}
+
+.pager-link {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 500;
+  letter-spacing: .01em;
+}
+
+/* ── Encadrés ───────────────────────────────────────────────────────────── */
+
+.box,
+.lead-index,
+.masthead-ear,
+.flyer {
+  border-color: var(--line);
+}
+
+.box {
+  padding: 1.15rem 1.3rem 1.35rem;
+  border-radius: 2px;
+}
+
+.box-title {
+  border-bottom-color: var(--line);
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+}
+
+.box--ink .box-title {
+  border-bottom-color: rgba(241, 239, 236, .25);
+}
+
+.lead-index-title {
+  font-size: .8rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+}
+
+.masthead-ear {
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+
+.masthead-ear-slot,
+.masthead-ear--slot [data-next-slot-label] {
+  font-family: var(--font-head);
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.briefs li {
+  border-bottom-style: solid;
+  border-bottom-color: var(--line);
+  font-size: .98rem;
+}
+
+.briefs strong {
+  font-size: .78em;
+  font-weight: 600;
+  letter-spacing: .14em;
+}
+
+/* ── Boutons : arrondis, en capitales espacées ──────────────────────────── */
+
+.btn {
+  min-height: 3rem;
+  padding: .5rem 1.6rem;
+  border-radius: var(--radius);
+  font-size: .82rem;
+  font-weight: 500;
+  letter-spacing: .18em;
+}
+
+.btn--small {
+  min-height: 2.75rem;
+  padding-inline: 1.15rem;
+  font-size: .76rem;
+}
+
+.icon-btn {
+  border-radius: 50%;
+}
+
+/* ── Menu : sept rubriques, en petites capitales espacées ───────────────── */
+
+@media (min-width: 62.01rem) {
+  .site-nav ul {
+    gap: clamp(.8rem, 1.6vw, 1.6rem);
+  }
+
+  .site-nav li a {
+    font-size: .76rem;
+    font-weight: 500;
+    letter-spacing: .14em;
+    white-space: nowrap;
+  }
+
+  .site-nav li a::after {
+    height: 1px;
+  }
+
+  .site-nav li a.nav-book {
+    min-height: 2.5rem;
+    border-radius: var(--radius);
+  }
+
+  .nav-num {
+    font-family: var(--font-head);
+    font-size: .95rem;
+    font-style: italic;
+  }
+}
+
+/* Écran moyen : les numéros de page s'effacent pour laisser tenir les sept rubriques. */
+@media (min-width: 62.01rem) and (max-width: 78rem) {
+  .site-nav .nav-num {
+    display: none;
+  }
+}
+
+.site-nav li a {
+  letter-spacing: .1em;
+}
+
+/* ── Le nom du salon ────────────────────────────────────────────────────── */
+
+.nameplate {
+  font-size: clamp(3rem, 14.5vw, 7.6rem);
+  line-height: 1.1;
+}
+
+@media (min-width: 60rem) {
+  .nameplate {
+    font-size: clamp(5rem, 9.5vw, 8rem);
+  }
+}
+
+.brand {
+  font-size: 2rem;
+}
+
+/* ── Photos : un second trait, décalé, en violet ────────────────────────── */
+
+.frame {
+  border-color: var(--line-strong);
+}
+
+.lead-photo .frame,
+.planche-image,
+.video-cadre {
+  box-shadow: .6rem .6rem 0 -1px var(--page-bg, var(--paper)), .6rem .6rem 0 0 var(--gold-bright);
+}
+
+/* ── Bandeau défilant ───────────────────────────────────────────────────── */
+
+.ticker {
+  font-size: .8rem;
+  font-weight: 500;
+  letter-spacing: .16em;
+}
+
+.ticker-label {
+  font-weight: 600;
+  letter-spacing: .18em;
+}
+
+.ticker li {
+  padding-block: .6rem;
+}
+
+/* ── Le post-it de la carte : en écriture fine ──────────────────────────── */
+
+.post-it span {
+  font-family: var(--font-name);
+}
+
+/* ── Pied de page ───────────────────────────────────────────────────────── */
+
+.ours-title {
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+}
+
+.ours-reseaux {
+  margin-top: .4rem;
+}
+
+.ours-paiement {
+  display: grid;
+  justify-items: start;
+  gap: .6rem;
+  margin-top: 1.4rem;
+}
+
+.ours-note {
+  max-width: 18rem;
+  color: var(--soft);
+  font-size: .88rem;
+  line-height: 1.4;
+}
+
+/* ── Réseaux sociaux ────────────────────────────────────────────────────── */
+
+.reseaux {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reseau {
+  display: inline-flex;
+  align-items: center;
+  gap: .7rem;
+  min-height: 2.9rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.reseau-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transition: background-color .25s ease, color .25s ease, border-color .25s ease, transform .4s var(--ease-out);
+}
+
+.reseau-icone .icon {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.reseau-texte {
+  display: grid;
+  line-height: 1.2;
+}
+
+.reseau-texte b {
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.reseau-texte small {
+  color: var(--soft);
+  font-size: .9rem;
+}
+
+.reseaux--noms {
+  gap: .8rem 1.8rem;
+}
+
+@media (hover: hover) {
+  .reseau:hover .reseau-icone {
+    border-color: var(--gold-bright);
+    background: var(--gold-bright);
+    color: var(--ink);
+    transform: translateY(-2px);
+  }
+}
+
+.reseau:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 2rem;
+}
+
+/* ── PayPal ─────────────────────────────────────────────────────────────── */
+
+.btn-paypal-site .icon:first-child {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.acompte-box p {
+  font-size: .98rem;
+}
+
+.acompte-box .btn {
+  justify-self: start;
+}
+
+/* ── Vidéos TikTok ──────────────────────────────────────────────────────── */
+
+.video-section .menu-group-title {
+  margin-bottom: 1.4rem;
+}
+
+.videos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13.5rem), 16.5rem));
+  gap: clamp(1.4rem, 3vw, 2.2rem);
+  margin: 0 0 clamp(1.5rem, 3vw, 2.2rem);
+  padding: 0 .6rem 0 0;
+  list-style: none;
+}
+
+/* Téléphone : les vidéos défilent de côté, une et demie à l'écran. */
+@media (max-width: 40rem) {
+  .videos {
+    grid-auto-columns: 68%;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    margin-inline: calc(var(--gutter) * -1);
+    padding: 0 var(--gutter) .9rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--gutter);
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .videos::-webkit-scrollbar {
+    display: none;
+  }
+
+  .video {
+    scroll-snap-align: start;
+  }
+}
+
+.video {
+  display: grid;
+  align-content: start;
+  gap: .8rem;
+  min-width: 0;
+}
+
+.video-cadre {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--ink);
+}
+
+.video-cadre iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.video-facade {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(198, 143, 207, .45), transparent 70%),
+    var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Les exemples gardent le format vertical, sans lecteur. */
+.videos--exemple .video-facade {
+  aspect-ratio: 9 / 16;
+  border: 1px dashed var(--gold);
+  border-radius: 2px;
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.video-facade img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1s var(--ease-out), filter .5s ease;
+}
+
+.video-facade::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(44, 32, 56, .72), transparent 42%);
+  pointer-events: none;
+}
+
+.videos--exemple .video-facade::after {
+  display: none;
+}
+
+.video-play {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 4.2rem;
+  height: 4.2rem;
+  border: 1px solid rgba(255, 255, 255, .85);
+  border-radius: 50%;
+  background: rgba(44, 32, 56, .35);
+  color: #fff;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  transition: transform .5s var(--ease-out), background-color .3s ease;
+}
+
+.videos--exemple .video-play {
+  border-color: var(--gold);
+  background: transparent;
+  color: var(--gold);
+}
+
+.video-play .icon {
+  width: 1.6rem;
+  height: 1.6rem;
+  margin-left: .2rem;
+  fill: currentColor;
+}
+
+.video-marque {
+  position: absolute;
+  bottom: .9rem;
+  left: 1rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+}
+
+.videos--exemple .video-marque {
+  color: var(--gold);
+}
+
+.video-marque .icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.video-exemple {
+  position: absolute;
+  top: 26%;
+  display: grid;
+  justify-items: center;
+  gap: .15rem;
+  text-align: center;
+}
+
+.video-exemple b {
+  font-size: .9rem;
+  font-weight: 600;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+}
+
+.video-exemple span {
+  font-family: var(--font-head);
+  font-size: 1.3rem;
+  font-style: italic;
+}
+
+.video-exemple small {
+  color: var(--muted);
+  font-family: var(--font-head);
+  font-size: 1.05rem;
+  font-style: italic;
+}
+
+@media (hover: hover) {
+  .video-facade:hover img {
+    transform: scale(1.04);
+  }
+
+  .video-facade:hover .video-play {
+    transform: scale(1.08);
+    background: var(--gold-bright);
+    color: var(--ink);
+  }
+}
+
+.video-facade:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -4px;
+}
+
+.video-titre {
+  font-family: var(--font-head);
+  font-size: 1.2rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.video-pied {
+  display: grid;
+  gap: .9rem;
+}
+
+/* La vidéo à la une : verticale, à la place de la grande photo. */
+/* La largeur décide, la hauteur suit le format vertical (sans dépasser l'écran). */
+.lead-video .frame,
+.lead:not(.lead--texte) .lead-video .frame {
+  flex: none;
+  width: min(100%, calc(min(78vh, 46rem) * 9 / 16));
+  min-height: 0;
+  aspect-ratio: 9 / 16;
+  margin-inline: auto;
+  background: var(--ink);
+}
+
+.lead-video .frame-inner {
+  inset: 0;
+}
+
+.lead-video-titre {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  margin-top: 1rem;
+  color: var(--muted);
+  font-family: var(--font-head);
+  font-size: 1.15rem;
+  font-style: italic;
+  text-align: center;
+}
+
+.lead-video-titre span {
+  margin: 0;
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.lead-video-titre .icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--gold);
+}
+
+/* ── Les planches de flashs ─────────────────────────────────────────────── */
+
+.planches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: clamp(1.8rem, 4vw, 3rem) clamp(1.4rem, 3vw, 2.4rem);
+  margin: clamp(1.4rem, 3vw, 2.2rem) 0 clamp(2.5rem, 6vw, 4.5rem);
+  padding: 0 .6rem 0 0;
+  list-style: none;
+}
+
+.notice-line {
+  border-style: solid;
+  border-color: var(--line);
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .12em;
+}
+
+.planche {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.planche-image {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--white);
+  cursor: zoom-in;
+  transition: box-shadow .5s var(--ease-out), transform .5s var(--ease-out);
+}
+
+.planche-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 1s var(--ease-out);
+}
+
+@media (hover: hover) {
+  .planche-image:hover {
+    box-shadow: .9rem .9rem 0 -1px var(--paper), .9rem .9rem 0 0 var(--gold-bright);
+    transform: translate(-2px, -2px);
+  }
+
+  .planche-image:hover img {
+    transform: scale(1.025);
+  }
+}
+
+.planche-image:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.planche.is-taken .planche-image img {
+  opacity: .45;
+  filter: grayscale(1);
+}
+
+.planche-pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem 1rem;
+}
+
+.planche-nom {
+  font-family: var(--font-head);
+  font-size: 1.45rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.planche-prix {
+  color: var(--muted);
+  font-size: .95rem;
+}
+
+.planche-prix b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Les planches sont souvent petites : la visionneuse les montre à hauteur d'écran. */
+.lightbox [data-lightbox-image] {
+  width: auto;
+  height: min(74vh, 56rem);
+  max-width: 88vw;
+  object-fit: contain;
+  background: #fff;
+}
+
+.lightbox-action {
+  display: flex;
+  justify-content: center;
+  margin-top: .9rem;
+}
+
+/* ── Événements ─────────────────────────────────────────────────────────── */
+
+.ev-pour {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ev-carte {
+  display: grid;
+  justify-items: center;
+  gap: .9rem;
+  padding: 2rem 1.2rem 1.8rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--white);
+  text-align: center;
+}
+
+.ev-icone {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  color: var(--gold);
+}
+
+.ev-icone .icon {
+  width: 1.8rem;
+  height: 1.8rem;
+  stroke-width: 1.2;
+}
+
+.ev-nom {
+  font-family: var(--font-head);
+  font-size: 1.7rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+/* La bande sombre : « comment ça se passe » sur la page, et le renvoi depuis la une. */
+.ev-bande {
+  position: relative;
+  margin-block: clamp(3rem, 7vw, 5.5rem);
+  padding-block: clamp(3rem, 7vw, 5.5rem);
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--paper);
+  --page-bg: var(--ink);
+  --accent-text: var(--gold-bright);
+  --soft: var(--muted-on-dark);
+}
+
+/* Le brin, en grand et en filigrane */
+.ev-bande::before {
+  content: "";
+  position: absolute;
+  right: -4rem;
+  bottom: -1rem;
+  width: min(36rem, 80vw);
+  aspect-ratio: 64 / 24;
+  background: var(--gold-bright);
+  opacity: .13;
+  -webkit-mask: var(--brin) center / contain no-repeat;
+  mask: var(--brin) center / contain no-repeat;
+  pointer-events: none;
+}
+
+.ev-bande .headline {
+  color: var(--paper);
+}
+
+.ev-bande .headline em {
+  color: var(--gold-bright);
+}
+
+.ev-bande-grille {
+  position: relative;
+  display: grid;
+  gap: clamp(1.8rem, 4vw, 3.5rem);
+}
+
+@media (min-width: 56rem) {
+  .ev-bande-grille {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: center;
+  }
+}
+
+.ev-bande-texte {
+  display: grid;
+  gap: 1rem;
+  max-width: 36rem;
+}
+
+.ev-bande-pour {
+  color: var(--gold-bright);
+  font-size: .8rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.ev-bande-prix {
+  font-family: var(--font-head);
+  font-size: clamp(1.5rem, 2.6vw, 1.9rem);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.ev-bande .actions {
+  margin-top: .4rem;
+}
+
+.btn--clair {
+  --fg: var(--paper);
+  --bd: rgba(241, 239, 236, .55);
+  --hover-bg: var(--paper);
+  --hover-fg: var(--ink);
+}
+
+.ev-etapes {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.ev-etapes li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 1.3rem;
+  padding-block: 1.3rem;
+  border-top: 1px solid rgba(241, 239, 236, .2);
+}
+
+.ev-etapes li:last-child {
+  border-bottom: 1px solid rgba(241, 239, 236, .2);
+}
+
+.ev-num {
+  color: var(--gold-bright);
+  font-family: var(--font-head);
+  font-size: 2.2rem;
+  font-style: italic;
+  line-height: 1;
+}
+
+.ev-etapes p {
+  font-size: 1.08rem;
+  line-height: 1.5;
+}
+
+.ev-tarif {
+  display: grid;
+  gap: 1.6rem;
+}
+
+@media (min-width: 56rem) {
+  .ev-tarif {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .ev-cta {
+    grid-column: 1 / -1;
+  }
+}
+
+.ev-prix {
+  display: grid;
+  gap: .6rem;
+  padding: 1.6rem 1.6rem 1.7rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold-bright);
+  background: var(--white);
+}
+
+.ev-prix-montant {
+  font-family: var(--font-head);
+  font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.ev-reperes {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ev-reperes li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: .8rem;
+}
+
+.ev-reperes .icon {
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-top: .15rem;
+  color: var(--gold);
+}
+
+.ev-cta {
+  display: grid;
+  justify-items: start;
+  gap: .7rem;
+}
+
+.page-evenements .page-head .actions {
+  margin-top: 1.4rem;
+}
+
+/* ── Messagerie : la demande d'animation ────────────────────────────────── */
+
+.choix-type {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choix-liste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.field .choix {
+  position: relative;
+  font-family: var(--font-text);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.field .choix input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+}
+
+.choix span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.6rem;
+  padding: .3rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  font-size: .95rem;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+
+.choix input:checked + span {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.choix input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.chat .deux {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0 .8rem;
+}
+
+/* ── Accessibilité : sans animation ─────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .video-facade img,
+  .planche-image,
+  .planche-image img,
+  .reseau-icone {
+    transition: none;
+  }
+}

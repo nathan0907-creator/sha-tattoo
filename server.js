@@ -53,11 +53,12 @@ const REGLAGES_DEFAUT = {
   email: CONFIG.contact.email,
   instagram: CONFIG.contact.instagram,
   facebook: CONFIG.contact.facebook,
+  tiktok: CONFIG.contact.tiktok || '',
   specialites: CONFIG.specialties.join('\n'),
   // Horaires, un réglage par jour (h0 = dimanche … h6 = samedi) : « 09:00-12:30 / 13:30-17:00 », vide = fermé.
   ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map((j) => ['h' + j, (CONFIG.hours[j] || []).map(([a, b]) => `${a}-${b}`).join(' / ')])),
   profil: CONFIG.avatar || '',
-  paypal: '',
+  paypal: CONFIG.contact.paypal || '',
   wero: '',
   conditionsAcompte: "L'acompte bloque votre créneau et sera déduit du prix final.",
 };
@@ -211,7 +212,7 @@ function garderLesChangements(complets) {
 }
 
 function baseVide() {
-  return { clients: [], sessions: {}, projets: [], galerie: [], sha: null, reglages: {}, exceptions: [], feries: { auto: true, ouverts: [] } };
+  return { clients: [], sessions: {}, projets: [], galerie: [], videos: null, sha: null, reglages: {}, exceptions: [], feries: { auto: true, ouverts: [] } };
 }
 
 let db;
@@ -222,6 +223,9 @@ try {
 }
 if (!db.reglages || typeof db.reglages !== 'object') db.reglages = {};
 if (!Array.isArray(db.exceptions)) db.exceptions = [];
+// Tant que la tatoueuse n'a pas réglé ses vidéos (null), ce sont celles de salon.config.js.
+if (!Array.isArray(db.videos)) db.videos = null;
+const videosActuelles = () => db.videos || CONFIG.videos || [];
 db.feries = { auto: true, ouverts: [], ...db.feries };
 
 let minuterie = null;
@@ -236,11 +240,23 @@ function sauverMaintenant() {
   fs.renameSync(tmp, BASE);
 }
 
-// Aucun flash n'est fourni avec le site : la galerie ne contient que ce que le salon publie.
 // (Nettoyage des anciens flashs d'exemple, si une base créée avant en contient encore.)
 if (db.semee !== undefined || db.galerie.some((g) => g.exemple)) {
   db.galerie = db.galerie.filter((g) => !g.exemple);
   delete db.semee;
+  sauverMaintenant();
+}
+
+// Les planches de Shannon livrées avec le site (salon.config.js, flashsDepart) : ajoutées une seule
+// fois à la galerie. Ce sont ensuite des flashs comme les autres : elle les renomme, les marque
+// « déjà tatoué » ou les retire (leur image reste dans public/img/flashs, rien n'est effacé).
+if (!db.flashsDepart && Array.isArray(CONFIG.flashsDepart)) {
+  const t = Date.now();
+  CONFIG.flashsDepart.forEach((f, i) => {
+    if (db.galerie.some((g) => g.src === f.src)) return;
+    db.galerie.push({ id: crypto.randomBytes(8).toString('hex'), type: 'flash', titre: f.titre, prix: null, src: f.src, largeur: f.largeur, hauteur: f.hauteur, dispo: true, at: t - i * 1000 });
+  });
+  db.flashsDepart = true;
   sauverMaintenant();
 }
 
@@ -494,6 +510,17 @@ function lienReseau(valeur, racine) {
   return racine + encodeURIComponent(v.replace(/^@/, ''));
 }
 
+/** « @sha22.10 », « sha22.10 » ou une adresse complète → l'adresse du compte TikTok. */
+function lienTiktok(valeur) {
+  const v = String(valeur || '').trim();
+  if (!v) return '';
+  if (/^https?:\/\//i.test(v)) return v;
+  return 'https://www.tiktok.com/@' + encodeURIComponent(v.replace(/^@/, ''));
+}
+
+/** Le nom PayPal.me (« ShannonLouis641 ») tiré de ce qu'a écrit la tatoueuse, ou ''. */
+const nomPaypal = (valeur) => String(valeur || '').trim().replace(/^https?:\/\//, '').replace(/^(www\.)?paypal\.me\//i, '').split(/[/?#]/)[0];
+
 function contexte(req, chemin) {
   const r = reglages();
   const full = `${r.adresse}, ${r.codePostal} ${r.ville}`;
@@ -513,6 +540,7 @@ function contexte(req, chemin) {
     annonces: annoncesCalendrier(hours, now.date),
     disponibilites: disponibilites(hours, now),
     flashs: images.filter((g) => g.type === 'flash').map(decrireImage),
+    videos: videosActuelles().map((v) => ({ id: v.id, auteur: v.auteur, titre: v.titre || '', vignette: v.vignette || '' })),
     client: client && {
       unread: db.projets.filter((p) => p.client === client.id).reduce((n, p) => n + (p.messages.length - p.vuClient), 0),
     },
@@ -529,7 +557,11 @@ function contexte(req, chemin) {
         email: r.email,
         instagram: lienReseau(r.instagram, 'https://www.instagram.com/'),
         facebook: lienReseau(r.facebook, 'https://www.facebook.com/'),
+        tiktok: lienTiktok(r.tiktok),
+        paypal: nomPaypal(r.paypal) ? 'https://www.paypal.me/' + encodeURIComponent(nomPaypal(r.paypal)) : '',
       },
+      evenements: CONFIG.evenements,
+      flashsExemple: CONFIG.flashsExemple || [],
       address: { street: r.adresse, postalCode: r.codePostal, city: r.ville, full },
       maps: {
         embed: `https://www.google.com/maps?q=${q}&output=embed`,
@@ -578,7 +610,7 @@ function infoFlash(fid) {
 }
 
 function lienPaypal(montant) {
-  const u = reglages().paypal.trim().replace(/^https?:\/\//, '').replace(/^(www\.)?paypal\.me\//i, '').split(/[/?#]/)[0];
+  const u = nomPaypal(reglages().paypal);
   return u ? `https://paypal.me/${encodeURIComponent(u)}/${montant}EUR` : null;
 }
 
@@ -726,6 +758,7 @@ route('POST', '/api/projets', (req, res, corps) => {
   limiter(req, 'projet', 15, 60 * 60000);
   const ouverts = db.projets.filter((p) => p.client === c.id && !['confirme', 'annule'].includes(p.etape));
   if (ouverts.length >= 5) throw new Erreur(400, 'Vous avez déjà 5 demandes en cours : continuez dans l’une d’elles.');
+  if (corps.evenement) return demandeEvenement(c, corps);
   const flash = infoFlash(corps.flash);
   if (!corps.reference && !flash) throw new Erreur(400, 'Ajoutez une photo de référence.');
   const emplacement = texte(corps.emplacement, 80, 'Endroit du tatouage');
@@ -749,6 +782,39 @@ route('POST', '/api/projets', (req, res, corps) => {
   sauver();
   return vueProjet(p);
 });
+
+/**
+ * Une demande d'animation tatouage (mariage, anniversaire, autre événement privé) : pas de photo
+ * de référence, mais ce qu'il faut pour chiffrer — le type d'événement, la date, le lieu (le
+ * tarif dépend du déplacement) et, si on le sait, le nombre d'invités à tatouer et la durée.
+ */
+const TYPES_EVENEMENT = ['Mariage', 'Anniversaire', 'Autre événement privé'];
+function demandeEvenement(c, corps) {
+  const e = corps.evenement || {};
+  const type = TYPES_EVENEMENT.includes(e.type) ? e.type : null;
+  if (!type) throw new Erreur(400, 'Choisissez le type d’événement.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(e.date || '')) || isNaN(Date.parse(e.date))) throw new Erreur(400, 'Indiquez la date de l’événement.');
+  if (e.date < nowInZone(CONFIG.timezone || 'Europe/Paris').date) throw new Erreur(400, 'La date de l’événement est déjà passée.');
+  const lieu = texte(e.lieu, 80, 'Lieu de l’événement');
+  const invites = texte(e.invites, 40, 'Nombre d’invités', false);
+  const duree = texte(e.duree, 40, 'Durée', false);
+  const msg = texte(corps.texte, 2000, 'Message', false);
+  const [a, m, j] = e.date.split('-');
+  const dateFr = `${j}/${m}/${a}`;
+  const p = {
+    id: id(), client: c.id, cree: Date.now(), maj: Date.now(), etape: 'discussion',
+    titre: `${type} · ${dateFr}`, flash: null,
+    infos: { evenement: { type, date: e.date, lieu, invites, duree } },
+    messages: [], devis: null, creneau: null, acompte: null, vuClient: 0, vuSha: 0,
+  };
+  ajouterMessage(p, 'client', [`Animation tatouage : ${type.toLowerCase()}`, `Date : ${dateFr}`, `Lieu : ${lieu}`,
+    invites ? `Invités à tatouer : ${invites}` : '', duree ? `Durée souhaitée : ${duree}` : '', msg].filter(Boolean).join('\n'));
+  ajouterMessage(p, 'systeme', 'Demande envoyée. La réponse et votre devis arriveront ici.');
+  p.vuClient = p.messages.length;
+  db.projets.push(p);
+  sauver();
+  return vueProjet(p);
+}
 
 route('GET', '/api/projets/([\\w-]+)', (req, res, corps, [pid]) => {
   const p = projetDe(clientConnecte(req), pid);
@@ -1009,7 +1075,7 @@ route('DELETE', '/api/sha/galerie/([\\w-]+)', (req, res, corps, [gid]) => {
 
 route('GET', '/api/sha/reglages', (req) => {
   exigerSha(req);
-  return { ...reglages(), identifiant: db.sha.identifiant };
+  return { ...reglages(), identifiant: db.sha.identifiant, videos: texteVideos() };
 });
 
 // La photo de profil : le médaillon affiché à côté du nom du salon.
@@ -1029,11 +1095,13 @@ route('DELETE', '/api/sha/profil', (req) => {
   return changerProfil('');
 });
 
-route('POST', '/api/sha/reglages', (req, res, corps) => {
+route('POST', '/api/sha/reglages', async (req, res, corps) => {
   exigerSha(req);
+  // Les vidéos d'abord : un lien non reconnu arrête tout, rien n'est enregistré à moitié.
+  const videos = 'videos' in corps ? await lireVideos(texte(corps.videos, 2000, 'Vidéos', false)) : null;
   const limites = {
     nom: 60, titreUne: 80, presentation: 1500, adresse: 120, codePostal: 10, ville: 80, telephone: 30, email: 120,
-    instagram: 120, facebook: 160, specialites: 800, paypal: 120, wero: 40, conditionsAcompte: 600,
+    instagram: 120, facebook: 160, tiktok: 120, specialites: 800, paypal: 120, wero: 40, conditionsAcompte: 600,
   };
   const prochains = { ...reglages() };
   for (const [k, max] of Object.entries(limites)) {
@@ -1051,9 +1119,66 @@ route('POST', '/api/sha/reglages', (req, res, corps) => {
     db.sha.identifiant = nouvelId;
   }
   garderLesChangements(prochains);
+  if (videos) remplacerVideos(videos);
   sauver();
-  return { ...reglages(), identifiant: db.sha.identifiant };
+  return { ...reglages(), identifiant: db.sha.identifiant, videos: texteVideos() };
 });
+
+/* --- Les vidéos TikTok : la tatoueuse colle les liens, le site garde l'identifiant de chaque
+   vidéo et, si TikTok la donne, sa vignette (enregistrée ici : celles de TikTok expirent). */
+
+const MAX_VIDEOS = 8;
+const TIKTOK_VIDEO = /tiktok\.com\/(?:(@[\w.-]+)\/(?:video|photo)|v|embed(?:\/v2)?|player\/v1)\/(\d{8,25})/i;
+
+async function lireVideos(saisie) {
+  const liens = saisie.split(/\s+/).map((l) => l.trim()).filter(Boolean);
+  if (liens.length > MAX_VIDEOS) throw new Erreur(400, `${MAX_VIDEOS} vidéos au plus.`);
+  const out = [];
+  for (const lien of liens) {
+    let url = /^https?:\/\//i.test(lien) ? lien : 'https://' + lien;
+    let m = TIKTOK_VIDEO.exec(url);
+    // Lien court (« vm.tiktok.com/… », bouton Partager de l'application) : on suit la redirection.
+    if (!m && /^https:\/\/(vm|vt|www)\.tiktok\.com\/(t\/)?[\w-]+\/?$/i.test(url)) {
+      try {
+        const r = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(6000), headers: { 'user-agent': 'Mozilla/5.0' } });
+        m = TIKTOK_VIDEO.exec(r.headers.get('location') || '');
+      } catch { /* réseau indisponible : signalé ci-dessous */ }
+    }
+    if (!m) throw new Erreur(400, `Lien TikTok non reconnu : « ${lien.slice(0, 60)} ». Sur TikTok, ouvrez la vidéo, touchez « Partager » puis « Copier le lien ».`);
+    if (!out.some((v) => v.id === m[2])) out.push({ id: m[2], auteur: (m[1] || '').slice(1) });
+  }
+  return out;
+}
+
+function remplacerVideos(liste) {
+  const anciennes = new Map(videosActuelles().map((v) => [v.id, v]));
+  db.videos = liste.map((v) => ({ ...anciennes.get(v.id), ...v, auteur: v.auteur || (anciennes.get(v.id) || {}).auteur || '' }));
+  for (const v of anciennes.values()) {
+    if (!db.videos.some((x) => x.id === v.id) && /^\/galerie\//.test(v.vignette || '')) fs.rmSync(path.join(GALERIE, path.basename(v.vignette)), { force: true });
+  }
+  // Les vignettes manquantes sont cherchées après coup : la page de réglages n'attend pas TikTok.
+  if (!process.env.SHA_SANS_RESEAU) for (const v of db.videos.filter((x) => !x.vignette)) chercherVignette(v);
+}
+
+async function chercherVignette(v) {
+  try {
+    const page = `https://www.tiktok.com/@${v.auteur || 'tiktok'}/video/${v.id}`;
+    const info = await (await fetch('https://www.tiktok.com/oembed?url=' + encodeURIComponent(page), { signal: AbortSignal.timeout(8000) })).json();
+    if (info.title) v.titre = String(info.title).slice(0, 150);
+    if (info.author_unique_id && !v.auteur) v.auteur = String(info.author_unique_id).slice(0, 40);
+    if (info.thumbnail_url) {
+      const r = await fetch(info.thumbnail_url, { signal: AbortSignal.timeout(10000) });
+      const type = (r.headers.get('content-type') || '').split(';')[0];
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (r.ok && /^image\/(jpeg|png|webp)$/.test(type) && buf.length < 3 * 1024 * 1024 && db.videos.includes(v)) {
+        v.vignette = '/galerie/' + enregistrerImage(`data:${type};base64,${buf.toString('base64')}`, GALERIE);
+      }
+    }
+  } catch { /* sans vignette, la vidéo s'affiche quand même (fond violet, bouton lecture) */ }
+  sauver();
+}
+
+const texteVideos = () => videosActuelles().map((v) => `https://www.tiktok.com/@${v.auteur || 'tiktok'}/video/${v.id}`).join('\n');
 
 /* --- Le calendrier : fermetures, ouvertures et horaires exceptionnels, jours fériés */
 
@@ -1182,7 +1307,8 @@ const ENTETES = {
     "style-src 'self' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
-    'frame-src https://www.google.com',
+    // Google Maps (plan de la page Pratique) et le lecteur TikTok (vidéos, chargées au clic).
+    'frame-src https://www.google.com https://www.tiktok.com',
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -1295,7 +1421,7 @@ async function gerer(req, res) {
 
   // Les pages du journal
   const page = chemin.length > 1 ? chemin.replace(/\/+$/, '') : chemin;
-  const ANCIENNES = { '/sha': '/salon', '/flashs': '/prestations#flashs' };
+  const ANCIENNES = { '/sha': '/salon' };
   if (ANCIENNES[page]) {
     res.writeHead(302, { Location: ANCIENNES[page] });
     return res.end();

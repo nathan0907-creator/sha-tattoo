@@ -34,7 +34,8 @@ window.ShaChat = (() => {
       return;
     }
     if (opts.flash) etat.flash = await trouverFlash(opts.flash);
-    if (!etat.charge || opts.flash) await charger();
+    if (opts.evenement) etat.evenement = true;
+    if (!etat.charge || opts.flash || opts.evenement) await charger();
     focusPremier();
   }
 
@@ -67,7 +68,7 @@ window.ShaChat = (() => {
     const b = e.target.closest('[data-ouvrir-chat]');
     if (!b) return;
     e.preventDefault();
-    ouvrir({ flash: b.dataset.flash || '' });
+    ouvrir({ flash: b.dataset.flash || '', evenement: 'evenement' in b.dataset });
   });
   document.getElementById('chat-fermer').addEventListener('click', fermer);
   fond.addEventListener('click', fermer);
@@ -111,6 +112,7 @@ window.ShaChat = (() => {
    */
   function apresConnexion() {
     if (!etat.moi) return vueCompte('inscription');
+    if (etat.evenement) return vueDemandeEvenement();
     if (etat.flash) return vueNouvelleConversation();
     const enCours = etat.moi.projets.find((p) => !['confirme', 'annule'].includes(p.etape));
     if (enCours) return ouvrirProjet(enCours.id);
@@ -202,6 +204,60 @@ window.ShaChat = (() => {
     const aDesDemandes = etat.moi && etat.moi.projets.length;
     afficher([intro('Votre demande', 'Pour que la tatoueuse puisse voir votre projet.'), form],
       { titre: NOM, sousTitre: 'Nouvelle demande', retour: aDesDemandes ? () => { etat.flash = null; vueListe(); } : null });
+  }
+
+  /**
+   * Une animation tatouage (mariage, anniversaire, autre événement privé) : pas de photo, mais
+   * ce qu'il faut pour chiffrer — le type d'événement, la date, le lieu ; le nombre d'invités à
+   * tatouer et la durée si on les connaît. L'envoi ouvre la conversation, le devis y arrive.
+   */
+  const TYPES_EVENEMENT = ['Mariage', 'Anniversaire', 'Autre événement privé'];
+  function vueDemandeEvenement() {
+    const erreur = el('p', { class: 'field-error', role: 'alert' });
+    const types = el('fieldset', { class: 'field choix-type' },
+      el('legend', { class: 'field-label' }, 'L’événement'),
+      el('div', { class: 'choix-liste' }, TYPES_EVENEMENT.map((t, i) => el('label', { class: 'choix' },
+        el('input', { type: 'radio', name: 'type', value: t, required: true, checked: i === 0 }), el('span', {}, t)))));
+    const ch = (id, libelle, attrs, aide) => el('div', { class: 'field' },
+      el('label', { for: id }, libelle), el('input', { id, ...attrs }), aide ? el('p', { class: 'field-hint' }, aide) : null);
+    const form = el('form', { class: 'formulaire nouvelle-demande', novalidate: true },
+      types,
+      ch('e-date', 'Date', { name: 'date', type: 'date', required: true, min: aujourdhui() }),
+      ch('e-lieu', 'Lieu', { name: 'lieu', required: true, maxlength: 80, placeholder: 'Ville, salle…', autocomplete: 'address-level2' }, 'Le déplacement compte dans le devis.'),
+      el('div', { class: 'deux' },
+        ch('e-invites', 'Invités à tatouer (facultatif)', { name: 'invites', maxlength: 40, placeholder: 'Environ 12', inputmode: 'numeric' }),
+        ch('e-duree', 'Durée (facultatif)', { name: 'duree', maxlength: 40, placeholder: '3 heures' })),
+      el('p', { class: 'field-hint' }, 'Maximum de 4 tatouages par heure. Des planches de flash peuvent être créées pour l’événement.'),
+      el('div', { class: 'field' }, el('label', { for: 'e-texte' }, 'Message (facultatif)'),
+        el('textarea', { id: 'e-texte', name: 'texte', rows: 3, maxlength: 2000, placeholder: 'Horaires de la journée, thème, une précision…' })),
+      erreur,
+      bouton('Envoyer ma demande', { type: 'submit', class: 'btn--accent btn-plein' }, 'send'));
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      erreur.textContent = '';
+      const d = Object.fromEntries(new FormData(form));
+      if (!d.date) { erreur.textContent = 'Indiquez la date de l’événement.'; form.date.focus(); return; }
+      if (!d.lieu.trim()) { erreur.textContent = 'Indiquez le lieu de l’événement.'; form.lieu.focus(); return; }
+      const envoi = form.querySelector('[type=submit]');
+      envoi.disabled = true;
+      envoi.classList.add('occupe');
+      try {
+        const { texte, ...evenement } = d;
+        const p = await api('POST', '/api/projets', { evenement, texte });
+        etat.evenement = false;
+        etat.moi = await lireMoi().catch(() => etat.moi);
+        vueProjet(p);
+      } catch (err) {
+        erreur.textContent = err.message;
+        envoi.disabled = false;
+        envoi.classList.remove('occupe');
+      }
+    });
+
+    const aDesDemandes = etat.moi && etat.moi.projets.length;
+    afficher([intro('Animation tatouage', 'Mariage, anniversaire ou autre événement privé : le devis arrive ici.'), form],
+      { titre: NOM, sousTitre: 'Demande de devis', retour: aDesDemandes ? () => { etat.evenement = false; vueListe(); } : null });
   }
 
   /* ---------- Compte (demandé au moment d'écrire) ---------- */

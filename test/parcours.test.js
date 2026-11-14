@@ -8,6 +8,7 @@ const http = require('node:http');
 
 const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'sha-test-'));
 process.env.SHA_DATA = dossier;
+process.env.SHA_SANS_RESEAU = '1'; // pas d'appel à TikTok pendant les tests
 const log = console.log;
 console.log = () => {};
 const { gerer, ageAu, contactValide, sauverMaintenant } = require('../server.js');
@@ -80,6 +81,25 @@ async function salon() {
   assert.strictEqual((await sha('POST', '/api/sha/connexion', ACCES)).status, 200);
   return sha;
 }
+
+test('animation tatouage : la demande de devis (type, date, lieu), sans photo', async () => {
+  const client = navigateur();
+  let r = await client('POST', '/api/inscription', { telephone: '07 99 88 77 66', prenom: 'Emma', nom: 'Leroy', motDePasse: 'motdepasse1', naissance: ilYa(28) });
+  assert.strictEqual(r.status, 200);
+  const evenement = { type: 'Mariage', date: ilYa(-1), lieu: 'Lens', invites: 'Environ 12', duree: '3 heures' };
+  assert.strictEqual((await client('POST', '/api/projets', { evenement: { ...evenement, type: 'Concert' } })).status, 400);
+  assert.strictEqual((await client('POST', '/api/projets', { evenement: { ...evenement, date: ilYa(0, -2) } })).status, 400, 'date passée');
+  assert.strictEqual((await client('POST', '/api/projets', { evenement: { ...evenement, lieu: ' ' } })).status, 400);
+  r = await client('POST', '/api/projets', { evenement, texte: 'Thème floral.' });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.corps));
+  assert.match(r.corps.titre, /^Mariage · \d\d\/\d\d\/\d{4}$/);
+  assert.deepStrictEqual(r.corps.infos.evenement, evenement);
+  assert.match(r.corps.messages[0].texte, /Animation tatouage : mariage\nDate : .*\nLieu : Lens\nInvités à tatouer : Environ 12\nDurée souhaitée : 3 heures\nThème floral\./);
+  // La tatoueuse la retrouve dans ses demandes
+  const sha = await salon();
+  const liste = (await sha('GET', '/api/sha/projets')).corps;
+  assert.ok((liste.projets || liste).some((p) => p.id === r.corps.id));
+});
 
 test('âge et contact', () => {
   assert.strictEqual(ageAu('2000-06-15', new Date(2018, 5, 14)), 17);
@@ -233,10 +253,12 @@ test('parcours complet : compte 18+, demande préparée par l’assistant, devis
   r = await sha('POST', '/api/sha/rendez-vous', { nom: 'X', titre: 'Essai', debut: '2099-02-01T10:15', duree: 30 });
   assert.strictEqual(r.status, 409);
 
-  // Les coordonnées de paiement ne paraissent jamais sur les pages publiques
+  // Le numéro Wero ne paraît jamais sur les pages publiques ; le lien PayPal, lui, est en bas de page
+  // (demande de la cliente) — sans montant : le montant exact n'est donné qu'avec le devis.
   for (const chemin of ['/', '/rendez-vous', '/nous-trouver']) {
     const { html } = await page(chemin);
-    assert.ok(!html.includes('shatattoo') && !html.includes('06 11 22 33 44'), chemin);
+    assert.ok(!html.includes('06 11 22 33 44'), chemin);
+    assert.ok(html.includes('href="https://www.paypal.me/shatattoo"') && !/paypal\.me\/shatattoo\/\d/.test(html), chemin);
   }
 });
 
@@ -258,7 +280,10 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
     assert.ok(html.slice(html.indexOf('<footer')).includes('06 50 81 15 32'), chemin);
     assert.doesNotMatch(lisible(html), /majeur/i, chemin);
   }
-  assert.ok(une.html.includes('family=Archivo+Narrow') && une.html.includes('Grand+Hotel'), 'les polices de la gazette de Cyrille');
+  // Une identité propre : les polices de Sha, plus celles de la gazette de Cyrille
+  assert.ok(une.html.includes('family=Allura') && une.html.includes('Cormorant+Garamond') && une.html.includes('family=Jost'));
+  assert.ok(!une.html.includes('Grand+Hotel') && !une.html.includes('League+Gothic'));
+  assert.ok(une.html.includes('/css/identite.css'));
 
   // La prise de rendez-vous : la phrase exacte, « devis » en gras et en italique
   const phrase = 'Les rendez-vous se prennent par message';
@@ -283,9 +308,39 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   for (const chemin of ['/prestations', '/galerie', '/mentions-legales', '/confidentialite', '/conditions', '/salon']) {
     assert.strictEqual((await page(chemin)).status, 200, chemin);
   }
+  // Les flashs ont leur page : les 20 planches de Shannon, en grand dans la visionneuse
   const flashs = await page('/flashs');
-  assert.strictEqual(flashs.status, 302);
-  assert.strictEqual(flashs.lieu, '/prestations#flashs');
+  assert.strictEqual(flashs.status, 200);
+  assert.strictEqual((flashs.html.match(/class="planche /g) || []).length, 20);
+  assert.ok(flashs.html.includes('src="/img/flashs/flash-01.jpg"') && flashs.html.includes('data-lightbox'));
+  assert.strictEqual((await fetch(base + '/img/flashs/flash-20.jpg')).status, 200);
+
+  // Les animations tatouage : seulement ce que Shannon a dit
+  const ev = lisible((await page('/evenements')).html);
+  for (const t of ['Mariages', 'Anniversaires', 'Autres événements privés', 'Devis à partir de 400 à 500 € minimum',
+    'Tarif variable selon le déplacement et le nombre d’heures', 'Maximum de 4 tatouages par heure',
+    'planches de flash personnalisées', 'Les invités ne paient rien individuellement', 'formulaire de consentement']) {
+    assert.ok(ev.includes(t), t);
+  }
+  assert.ok((await page('/evenements')).html.includes('data-evenement'), 'un bouton de demande de devis');
+
+  // Réseaux (avec icônes) et PayPal, en bas de chaque page
+  const pied = une.html.slice(une.html.indexOf('<footer'));
+  for (const lien of ['https://www.instagram.com/sha_tatt00', 'https://www.tiktok.com/@sha22.10', 'https://www.facebook.com/share/1Hx7oW4nBN/']) {
+    assert.ok(pied.includes(`href="${lien}"`), lien);
+  }
+  // (Le lien PayPal de départ, celui de Shannon, est vérifié dans salon.config.js ; un test plus haut l'a changé.)
+  assert.match(pied, /href="https:\/\/www\.paypal\.me\/[\w-]+"/);
+  assert.strictEqual(require('../salon.config.js').contact.paypal, 'https://www.paypal.me/ShannonLouis641');
+  assert.ok(pied.includes('#i-tiktok') && pied.includes('#i-instagram') && pied.includes('#i-facebook'));
+
+  // Les vidéos TikTok : la plus likée à la une, en grand ; les autres plus bas. Rien n'est chargé
+  // depuis TikTok avant le clic, et la politique de sécurité autorise son lecteur.
+  const lead = une.html.slice(une.html.indexOf('class="container lead'), une.html.indexOf('lead-index'));
+  assert.ok(lead.includes('data-tiktok="7707336491780934944"'));
+  assert.ok(une.html.includes('data-tiktok="7626117253783751958"'));
+  assert.ok(!une.html.includes('<iframe'));
+  assert.match((await fetch(base + '/')).headers.get('content-security-policy'), /frame-src [^;]*https:\/\/www\.tiktok\.com/);
 
   const inconnue = await page('/nimporte-quoi');
   assert.strictEqual(inconnue.status, 404);
@@ -348,9 +403,9 @@ test('prochaines disponibilités : les plages libres, moins les rendez-vous fix�
 test('l’espace salon : galerie, horaires, photo de profil, refus des faux fichiers et des requêtes externes', async () => {
   const sha = await salon();
 
-  // Aucun flash n'est fourni avec le site : la tatoueuse publie les siens
-  assert.deepStrictEqual(await (await fetch(base + '/api/galerie')).json(), []);
-  assert.match(lisible((await page('/prestations')).html), /À paraître/);
+  // Les 20 planches de Shannon sont là dès le départ ; elle en publie d'autres
+  const depart = await (await fetch(base + '/api/galerie')).json();
+  assert.strictEqual(depart.filter((x) => x.type === 'flash').length, 20);
 
   let r = await sha('POST', '/api/sha/galerie', { type: 'flash', titre: 'Pivoine', prix: 120, image: png, largeur: 800, hauteur: 1000 });
   assert.strictEqual(r.status, 200);
@@ -363,13 +418,33 @@ test('l’espace salon : galerie, horaires, photo de profil, refus des faux fich
   const pub = await (await fetch(base + '/api/galerie')).json();
   assert.ok(pub.some((x) => x.id === g.id && x.prix === 120));
   assert.strictEqual((await fetch(base + g.src)).status, 200);
-  const carte = (await page('/prestations')).html;
+  const carte = (await page('/flashs')).html;
   assert.ok(carte.includes(g.src) && carte.includes('width="800" height="1000"'));
   assert.ok(carte.includes(`data-flash="${g.id}"`), 'le flash se demande par message');
 
   await sha('POST', '/api/sha/galerie/' + g.id, { dispo: false });
   assert.strictEqual((await (await fetch(base + '/api/galerie')).json()).find((x) => x.id === g.id).dispo, false);
-  assert.match(lisible((await page('/prestations')).html), /Déjà tatoué/);
+  assert.match(lisible((await page('/flashs')).html), /Déjà tatoué/);
+
+  // Une planche de départ retirée : son image reste dans le site (public/img/flashs)
+  const premiere = depart.find((x) => x.src === '/img/flashs/flash-01.jpg');
+  assert.strictEqual((await sha('DELETE', '/api/sha/galerie/' + premiere.id)).status, 200);
+  assert.ok(!(await page('/flashs')).html.includes('flash-01.jpg'));
+  assert.strictEqual((await fetch(base + '/img/flashs/flash-01.jpg')).status, 200);
+
+  // Vidéos TikTok : des liens reconnus, dans l'ordre choisi ; un lien étranger est refusé
+  r = await sha('GET', '/api/sha/reglages');
+  assert.strictEqual(r.corps.videos.split('\n')[0], 'https://www.tiktok.com/@sha22.10/video/7707336491780934944');
+  r = await sha('POST', '/api/sha/reglages', { videos: 'https://www.youtube.com/watch?v=abc' });
+  assert.strictEqual(r.status, 400);
+  assert.match(r.corps.erreur, /TikTok/);
+  r = await sha('POST', '/api/sha/reglages', { videos: 'https://www.tiktok.com/@sha22.10/video/7626117253783751958?is_from_webapp=1\nwww.tiktok.com/@sha22.10/video/7707336491780934944', tiktok: '@sha22.10' });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.corps));
+  const lead = (html) => html.slice(html.indexOf('class="container lead'), html.indexOf('lead-index'));
+  assert.ok(lead((await page('/')).html).includes('data-tiktok="7626117253783751958"'), 'la première de la liste passe à la une');
+  r = await sha('POST', '/api/sha/reglages', { videos: '' });
+  assert.ok(!(await page('/')).html.includes('data-tiktok='), 'sans vidéo, la une reprend la photo');
+  assert.ok((await page('/')).html.includes('src="/img/exemples/une.svg"'));
 
   // Horaires : écrits librement, enregistrés toujours de la même façon
   r = await sha('POST', '/api/sha/reglages', { h1: '9h-12h / 14h à 18h30', h6: '' });
@@ -385,7 +460,6 @@ test('l’espace salon : galerie, horaires, photo de profil, refus des faux fich
   assert.ok((await page('/')).html.includes('class="brand-avatar" src="/img/profil.webp"'));
   // Sans photo publiée : des images « exemple » pour la une et les réalisations
   const accueil = (await page('/')).html;
-  assert.ok(accueil.includes('src="/img/exemples/une.svg"'));
   assert.ok(accueil.includes('src="/img/exemples/realisation-1.svg"'));
   assert.strictEqual((await fetch(base + '/img/exemples/une.svg')).status, 200);
   assert.strictEqual((await fetch(base + '/img/exemples/realisation-6.svg')).status, 200);

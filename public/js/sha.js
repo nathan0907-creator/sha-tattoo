@@ -302,7 +302,18 @@
     };
 
     // Le projet : ce que le client a donné avant d'envoyer sa demande
-    if (p.infos) {
+    if (p.infos && p.infos.evenement) {
+      const ev = p.infos.evenement;
+      const [a, m, j] = ev.date.split('-');
+      blocs.push(el('section', { class: 'outil' },
+        el('p', { class: 'box-title' }, 'L’événement'),
+        el('dl', { class: 'projet-infos' },
+          el('dt', {}, 'Type'), el('dd', {}, ev.type),
+          el('dt', {}, 'Date'), el('dd', {}, `${j}/${m}/${a}`),
+          el('dt', {}, 'Lieu'), el('dd', {}, ev.lieu),
+          ev.invites ? [el('dt', {}, 'Invités'), el('dd', {}, ev.invites)] : null,
+          ev.duree ? [el('dt', {}, 'Durée'), el('dd', {}, ev.duree)] : null)));
+    } else if (p.infos) {
       const ref = p.infos.reference ? `/api/projets/${p.id}/images/${p.infos.reference}` : (p.flash ? p.flash.src : '');
       blocs.push(el('section', { class: 'outil' },
         el('p', { class: 'box-title' }, 'Le projet'),
@@ -720,7 +731,7 @@
             el('p', { class: 'field-hint' }, 'Elle s’affiche en médaillon rond, cerclée de violet, à côté du nom du salon.')))),
       el('fieldset', {}, el('legend', {}, 'La une'),
         ch('nom', 'Nom du salon', { required: true, maxlength: 60 }),
-        ch('titreUne', 'Gros titre', { maxlength: 80 }, 'Une barre oblique sépare les lignes ; un mot entre tirets bas s’écrit en cursive : Votre tatouage, / _sur mesure_'),
+        ch('titreUne', 'Gros titre', { maxlength: 80 }, 'Une barre oblique sépare les lignes ; des mots entre tirets bas s’écrivent en italique violet : Votre tatouage, / _sur mesure_'),
         ch('presentation', 'Article de la une', { rows: 6, maxlength: 1500 }, 'Un paragraphe par ligne.'),
         ch('specialites', 'La carte : vos spécialités', { rows: 5, maxlength: 800 }, 'Une spécialité par ligne.')),
       el('fieldset', {}, el('legend', {}, 'Adresse et contact'),
@@ -728,14 +739,18 @@
         el('div', { class: 'deux' }, ch('codePostal', 'Code postal', { maxlength: 10, inputmode: 'numeric' }), ch('ville', 'Ville', { maxlength: 80 })),
         el('div', { class: 'deux' }, ch('telephone', 'Téléphone', { type: 'tel', maxlength: 30 }), ch('email', 'E-mail', { type: 'email', maxlength: 120 })),
         ch('instagram', 'Instagram', { maxlength: 120, placeholder: '@sha_tatt00' }),
+        ch('tiktok', 'TikTok', { maxlength: 120, placeholder: '@sha22.10' }),
         ch('facebook', 'Facebook', { maxlength: 160, placeholder: 'Adresse de la page' })),
+      el('fieldset', {}, el('legend', {}, 'Vidéos TikTok'),
+        ch('videos', 'Liens des vidéos', { rows: 5, maxlength: 2000, placeholder: 'https://www.tiktok.com/@sha22.10/video/…', spellcheck: 'false' },
+          'Un lien par ligne, 8 au plus. La première s’affiche à la une, en grand ; les autres plus bas. Sur TikTok : « Partager » puis « Copier le lien ».')),
       el('fieldset', {}, el('legend', {}, 'Horaires'),
         el('p', { class: 'field-hint' }, 'Écrivez par exemple « 9h-12h30 / 13h30-17h ». Laissez vide pour « fermé ».'),
         el('div', { class: 'horaires' }, JOURS.map(([j, nom]) => el('div', { class: 'horaire' },
           el('label', { for: 'r-h' + j }, nom),
           el('input', { id: 'r-h' + j, name: 'h' + j, value: (r['h' + j] || '').replace(/:00\b/g, 'h').replace(/:(\d\d)/g, 'h$1').replace(/\b0(\d)h/g, '$1h'), placeholder: 'Fermé', maxlength: 80 }))))),
       el('fieldset', {}, el('legend', {}, 'Acompte'),
-        ch('paypal', 'Lien PayPal.me', { maxlength: 120, placeholder: 'paypal.me/votrenom' }, 'Le client arrive sur PayPal avec le montant exact de l’acompte. Vide : PayPal n’est pas proposé.'),
+        ch('paypal', 'Lien PayPal.me', { maxlength: 120, placeholder: 'paypal.me/votrenom' }, 'Avec un devis, le client arrive sur PayPal avec le montant exact de l’acompte ; le lien est aussi en bas de chaque page. Vide : PayPal n’est pas proposé.'),
         ch('wero', 'Numéro Wero', { maxlength: 40, placeholder: '06 12 34 56 78' }, 'Montré seulement aux clients qui ont un acompte à régler. Vide : Wero n’est pas proposé.'),
         ch('conditionsAcompte', 'Conditions de l’acompte', { rows: 3, maxlength: 600 })),
       el('fieldset', {}, el('legend', {}, 'Accès à votre espace'),

@@ -34,9 +34,11 @@ const ratioClass = photo => `r-${['4/3', '4/5', '1/1', '3/4', '16/9'].includes(p
 const PAGES = [
   { path: '/', number: 1, label: 'La une' },
   { path: '/prestations', number: 2, label: 'La carte' },
-  { path: '/galerie', number: 3, label: 'En images' },
-  { path: '/rendez-vous', number: 4, label: 'Prendre rendez-vous' },
-  { path: '/nous-trouver', number: 5, label: 'Pratique' },
+  { path: '/flashs', number: 3, label: 'Les flashs' },
+  { path: '/galerie', number: 4, label: 'En images' },
+  { path: '/evenements', number: 5, label: 'Événements' },
+  { path: '/rendez-vous', number: 6, label: 'Prendre rendez-vous' },
+  { path: '/nous-trouver', number: 7, label: 'Pratique' },
 ];
 
 /** « samedi 10 octobre 2026 » et numéro du jour dans l'année, comme sur la manchette d'un quotidien. */
@@ -203,9 +205,98 @@ function button(label, href, { variant = '', iconName = 'arrow-right', magnetic 
   return html`<a class="btn ${variant}" href="${href}" ${raw(magnetic ? 'data-magnetic' : '')} ${raw(external ? 'target="_blank" rel="noopener"' : '')}>${buttonLabel(label)}${iconName ? icon(iconName) : ''}</a>`;
 }
 
-/** Bouton qui ouvre la messagerie (le devis, puis le rendez-vous, se font par message). */
-function messageButton(label = 'Écrire un message', { variant = 'btn--accent', flash = '' } = {}) {
-  return html`<button type="button" class="btn ${variant}" data-ouvrir-chat ${flash ? raw(`data-flash="${escapeHtml(flash)}"`) : ''}>${buttonLabel(label)}${icon('arrow-right')}</button>`;
+/**
+ * Bouton qui ouvre la messagerie (le devis, puis le rendez-vous, se font par message).
+ * flash : la demande porte sur ce flash ; evenement : c'est une demande d'animation tatouage.
+ */
+function messageButton(label = 'Écrire un message', { variant = 'btn--accent', flash = '', evenement = false } = {}) {
+  return html`<button type="button" class="btn ${variant}" data-ouvrir-chat ${flash ? raw(`data-flash="${escapeHtml(flash)}"`) : ''} ${evenement ? raw('data-evenement') : ''}>${buttonLabel(label)}${icon('arrow-right')}</button>`;
+}
+
+// ── Réseaux, paiement, vidéos ──────────────────────────────────────────────
+
+const RESEAUX = [
+  ['instagram', 'Instagram'],
+  ['tiktok', 'TikTok'],
+  ['facebook', 'Facebook'],
+];
+
+/** « https://www.tiktok.com/@sha22.10 » → « @sha22.10 » : le nom du compte, tel qu'on le cherche. */
+function handle(url) {
+  const m = /(?:instagram\.com|tiktok\.com)\/(@?[\w.-]+)/i.exec(url || '');
+  return m ? `@${m[1].replace(/^@/, '')}` : '';
+}
+
+/**
+ * Les réseaux du salon, en pastilles rondes avec leur icône.
+ *   withNames : le nom du réseau et du compte à côté de l'icône (sinon, l'icône seule).
+ */
+function socialLinks(contact, { withNames = false, className = '' } = {}) {
+  const liens = RESEAUX.filter(([key]) => contact[key]);
+  if (!liens.length) return '';
+  return html`<ul class="reseaux ${withNames ? 'reseaux--noms' : ''} ${className}">
+    ${liens.map(([key, name]) => html`<li><a class="reseau reseau--${key}" href="${contact[key]}" target="_blank" rel="noopener" ${withNames ? '' : raw(`aria-label="${name} (nouvel onglet)"`)}>
+      <span class="reseau-icone">${icon(key)}</span>
+      ${withNames ? html`<span class="reseau-texte"><b>${name}</b>${handle(contact[key]) ? html`<small>${handle(contact[key])}</small>` : ''}</span>` : ''}
+    </a></li>`)}
+  </ul>`;
+}
+
+/** Le bouton PayPal : un lien sobre, qui ouvre PayPal dans un nouvel onglet. */
+function paypalButton(contact, { label = 'Payer par PayPal', variant = 'btn--outline' } = {}) {
+  if (!contact.paypal) return '';
+  return html`<a class="btn btn-paypal-site ${variant}" href="${contact.paypal}" target="_blank" rel="noopener">${icon('paypal')}${buttonLabel(label)}${icon('arrow-up-right')}</a>`;
+}
+
+/**
+ * Les vidéos TikTok, au format vertical. Rien n'est chargé depuis TikTok avant le clic : une
+ * vignette et un bouton lecture tiennent la place (comme le plan Google Maps). Sans vidéo
+ * publiée, des cadres « exemple » montrent où elles iront et mènent au compte TikTok.
+ */
+function videoGrid(videos, contact, { limit = 4 } = {}) {
+  const compte = handle(contact.tiktok);
+  if (!videos.length) {
+    return html`<ul class="videos videos--exemple">
+      ${[1, 2, 3].map(i => html`<li class="video" data-reveal data-delay="${i * 80}">
+        <a class="video-facade" ${contact.tiktok ? raw(`href="${escapeHtml(contact.tiktok)}" target="_blank" rel="noopener"`) : ''} aria-label="Exemple de vidéo ${i}, à ajouter${contact.tiktok ? ' : voir le compte TikTok' : ''}">
+          <span class="video-exemple"><b>Exemple</b><span>Vidéo TikTok ${i}</span><small>à ajouter</small></span>
+          <span class="video-play">${icon('play')}</span>
+          ${compte ? html`<span class="video-marque">${icon('tiktok')}${compte}</span>` : ''}
+        </a>
+      </li>`)}
+    </ul>`;
+  }
+  return html`<ul class="videos">
+    ${videos.slice(0, limit).map((v, i) => html`<li class="video" data-reveal data-delay="${i * 80}">
+      ${videoPlayer(v, compte)}
+      ${v.titre ? html`<p class="video-titre">${v.titre}</p>` : ''}
+    </li>`)}
+  </ul>`;
+}
+
+/** Une vidéo TikTok verticale : vignette et bouton lecture ; le lecteur TikTok se charge au clic. */
+function videoPlayer(v, compte = '', { lazy = true } = {}) {
+  return html`<div class="video-cadre" data-tiktok="${v.id}">
+    <button type="button" class="video-facade" data-tiktok-play aria-label="Lire la vidéo${v.titre ? ` : ${v.titre}` : ''}">
+      ${v.vignette ? html`<img src="${v.vignette}" alt="" width="540" height="960" ${raw(lazy ? 'loading="lazy"' : 'fetchpriority="high"')} decoding="async">` : ''}
+      <span class="video-play">${icon('play')}</span>
+      <span class="video-marque">${icon('tiktok')}${v.auteur ? `@${v.auteur}` : compte}</span>
+    </button>
+  </div>`;
+}
+
+/** La rubrique vidéo : les vidéos, puis les réseaux. */
+function videoSection(site, { id = 'videos-titre', title = 'En vidéo', bar, videos = site.videos } = {}) {
+  const { config } = site;
+  if (!config.contact.tiktok && !videos.length) return '';
+  return html`<section class="container section video-section" aria-labelledby="${id}">
+    ${bar ? bar(id, title) : html`<h2 class="menu-group-title" id="${id}" data-reveal>${title}</h2>`}
+    ${videoGrid(videos, config.contact)}
+    <div class="video-pied" data-reveal>
+      ${socialLinks(config.contact, { withNames: true })}
+      ${videos.length ? html`<p class="field-hint">Les vidéos sont lues depuis TikTok, qui dépose ses propres cookies quand vous en lancez une.</p>` : ''}
+    </div>
+  </section>`;
 }
 
 /**
@@ -229,4 +320,5 @@ module.exports = {
   euros, capitalize, telHref, picture, ratioClass, PAGES, edition, folio, weekHours, hoursTable, openDaysSentence,
   openStatusLabel, openBadge, specialtiesTable, availabilityBox, calendarNotices, houseRules, appointmentSentence,
   kicker, sectionBar, stamp, ticker, buttonLabel, button, messageButton, splitTitle,
+  socialLinks, paypalButton, videoGrid, videoSection, videoPlayer, handle,
 };
