@@ -32,7 +32,7 @@ console.log = log;
 
 const PAGES = ['/', '/prestations', '/galerie', '/rendez-vous', '/nous-trouver', '/mentions-legales', '/confidentialite', '/conditions', '/salon'];
 
-/** Les adresses du site (« /prestations », « /img/une.webp ») deviennent celles de la démo (« /sha-tattoo/… »). */
+/** Les adresses du site (« /prestations », « /img/profil.webp ») deviennent celles de la démo (« /sha-tattoo/… »). */
 function adapter(html) {
   return html
     .replace(/(\s(?:href|src|action|data-src|data-full|data-zoom|srcset)=")\/(?!\/)/g, `$1${base}/`)

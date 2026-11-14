@@ -33,7 +33,7 @@
   const projets = [
     {
       id: 'p1', client: 'c1', titre: 'Projet · Avant-bras', etape: 'discussion', maj: maintenant - 20 * MIN, vuSha: 0,
-      infos: { emplacement: 'Avant-bras', taille: 'Environ 12 cm', reference: null }, flash: { src: BASE + '/img/une.webp', titre: 'Référence' },
+      infos: { emplacement: 'Avant-bras', taille: 'Environ 12 cm', reference: null }, flash: { src: BASE + '/img/exemples/realisation-2.svg', titre: 'Référence' },
       messages: [msg('client', 'Endroit : Avant-bras\nTaille : Environ 12 cm\nUne pivoine en traits fins, plutôt en noir.', 20 * MIN), msg('systeme', 'Demande envoyée. La réponse et votre devis arriveront ici.', 20 * MIN)],
       devis: null, creneau: null, acompte: null,
     },

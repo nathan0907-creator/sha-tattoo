@@ -542,7 +542,8 @@ function contexte(req, chemin) {
       avatar: r.profil,
       depositTerms: r.conditionsAcompte,
       about: { paragraphs: r.presentation.split(/\n+/).map((s) => s.trim()).filter(Boolean) },
-      photos: { hero: CONFIG.photoUne || photos[0] || null, gallery: photos },
+      // Les photos publiées par Shannon ; à défaut, les images « exemple ».
+      photos: { hero: photos[0] || CONFIG.photoUne || null, gallery: photos.length ? photos : (CONFIG.photosExemple || []) },
       legal: { company: r.nom, status: '', siret: '', publisher: '', host: '', ...CONFIG.legal },
     },
   };

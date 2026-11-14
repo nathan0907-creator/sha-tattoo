@@ -39,8 +39,16 @@ module.exports = {
   // La photo de profil (médaillon rond cerclé de violet, à côté du nom du salon).
   avatar: '/img/profil.webp',
 
-  // La grande photo de la une (sinon, la dernière réalisation publiée).
-  photoUne: { src: '/img/une.webp', alt: 'Jambe : pivoines, cœur, roses et lettrage en traits fins', ratio: '3/4', width: 337, height: 547 },
+  // Tant que Shannon n'a publié aucune réalisation, des images « exemple » tiennent la place :
+  // la grande photo de la une, et quelques réalisations. Sa première photo publiée les remplace.
+  photoUne: { src: '/img/exemples/une.svg', alt: 'Exemple : photo de la une, à changer', ratio: '3/4', width: 600, height: 800 },
+  photosExemple: [1, 2, 3, 4, 5, 6].map((i) => ({
+    src: `/img/exemples/realisation-${i}.svg`,
+    alt: `Exemple : réalisation ${i}, à changer`,
+    ratio: i % 3 === 1 ? '4/5' : i % 3 === 2 ? '1/1' : '3/4',
+    width: i % 3 === 1 ? 640 : i % 3 === 2 ? 700 : 600,
+    height: i % 3 === 2 ? 700 : 800,
+  })),
 
   timezone: 'Europe/Paris',
 

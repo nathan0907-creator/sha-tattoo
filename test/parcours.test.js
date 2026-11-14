@@ -383,9 +383,12 @@ test('l’espace salon : galerie, horaires, photo de profil, refus des faux fich
   // Photo de profil : le médaillon à côté du nom
   // Par défaut, la photo de profil du salon (salon.config.js)
   assert.ok((await page('/')).html.includes('class="brand-avatar" src="/img/profil.webp"'));
-  // La grande photo de la une
-  assert.ok((await page('/')).html.includes('src="/img/une.webp"'));
-  assert.strictEqual((await fetch(base + '/img/une.webp')).status, 200);
+  // Sans photo publiée : des images « exemple » pour la une et les réalisations
+  const accueil = (await page('/')).html;
+  assert.ok(accueil.includes('src="/img/exemples/une.svg"'));
+  assert.ok(accueil.includes('src="/img/exemples/realisation-1.svg"'));
+  assert.strictEqual((await fetch(base + '/img/exemples/une.svg')).status, 200);
+  assert.strictEqual((await fetch(base + '/img/exemples/realisation-6.svg')).status, 200);
   assert.strictEqual((await fetch(base + '/img/profil.webp')).status, 200);
   r = await sha('POST', '/api/sha/profil', { image: png });
   assert.match(r.corps.profil, /^\/galerie\//);
