@@ -1401,6 +1401,145 @@ img.is-planche {
   gap: 0 .8rem;
 }
 
+/* ── L'application : installation et notifications ──────────────────────── */
+
+.ours-installer[hidden],
+.rappel-notif[hidden],
+.panneau-appli[hidden] {
+  display: none !important;
+}
+
+.ours-installer {
+  font: inherit;
+}
+
+.ours-installer .icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* Messagerie : « Être prévenu(e) des réponses » */
+.rappel-notif {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: .4rem .7rem;
+  margin: 0 0 .9rem;
+  padding: .7rem .5rem .7rem .9rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold-bright);
+  border-radius: 2px;
+  background: var(--white);
+  font-size: .92rem;
+  line-height: 1.35;
+}
+
+.rappel-notif > .icon {
+  width: 1.3rem;
+  height: 1.3rem;
+  color: var(--gold);
+}
+
+.rappel-notif p {
+  margin: 0;
+}
+
+.rappel-notif .btn {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.rappel-notif-fermer {
+  grid-column: 3;
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.rappel-notif-fermer:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.rappel-notif-fermer .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Espace salon : la cloche et son panneau */
+.barre-outils {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.cloche {
+  position: relative;
+}
+
+.cloche--a-faire::after {
+  content: "";
+  position: absolute;
+  top: .45rem;
+  right: .45rem;
+  width: .55rem;
+  height: .55rem;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--gold-bright);
+}
+
+.panneau-appli {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  gap: .7rem;
+  width: min(100% - 2rem, 30rem);
+  margin: 1rem 1rem 0 auto;
+  padding: 1.1rem 1.2rem 1.2rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 1.2rem 2.4rem -1.4rem rgba(44, 32, 56, .5);
+}
+
+.panneau-appli-corps {
+  display: grid;
+  gap: .7rem;
+  padding-right: 2.5rem;
+}
+
+.panneau-appli-corps .box-title {
+  margin: .3rem 0 0;
+}
+
+.panneau-appli-corps p {
+  margin: 0;
+  font-size: .95rem;
+}
+
+.panneau-appli-corps p .icon {
+  display: inline-block;
+  width: 1.05rem;
+  height: 1.05rem;
+  vertical-align: -.18em;
+  color: var(--ok);
+}
+
+.panneau-appli-fermer {
+  position: absolute;
+  top: .6rem;
+  right: .6rem;
+}
+
 /* ── Accessibilité : sans animation ─────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

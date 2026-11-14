@@ -112,6 +112,11 @@ window.ShaChat = (() => {
    */
   function apresConnexion() {
     if (!etat.moi) return vueCompte('inscription');
+    if (etat.projetVise) {
+      const pid = etat.projetVise;
+      etat.projetVise = null;
+      if (etat.moi.projets.some((p) => p.id === pid)) return ouvrirProjet(pid);
+    }
     if (etat.evenement) return vueDemandeEvenement();
     if (etat.flash) return vueNouvelleConversation();
     const enCours = etat.moi.projets.find((p) => !['confirme', 'annule'].includes(p.etape));
@@ -563,7 +568,7 @@ window.ShaChat = (() => {
       }
     });
 
-    afficher([el('div', { class: 'conversation' }, entete, fil, zoneAction), saisie],
+    afficher([el('div', { class: 'conversation' }, rappelNotifications(), entete, fil, zoneAction), saisie],
       { titre: p.titre, sousTitre: ETAPES[p.etape], retour: retourListe });
     corps.classList.add('mode-conversation');
     rendre(p);
@@ -576,6 +581,52 @@ window.ShaChat = (() => {
         if (q.messages.length + q.etape !== etat.signature) rendre(q);
       } catch { /* réseau momentanément indisponible : on réessaie au prochain tour */ }
     }, 5000);
+  }
+
+  /**
+   * En haut de la conversation : proposer d'être prévenu(e) des réponses par une notification.
+   * Rien ne s'affiche si c'est déjà fait, refusé, ou masqué par la personne.
+   */
+  function rappelNotifications() {
+    const zone = el('div', { class: 'rappel-notif', hidden: true });
+    const { application } = Sha;
+    let masque = false;
+    try { masque = localStorage.getItem('sha-rappel-notif') === 'non'; } catch { /* stockage indisponible */ }
+    if (masque) return zone;
+    const fermer = el('button', { type: 'button', class: 'rappel-notif-fermer', 'aria-label': 'Ne plus proposer', onclick: () => {
+      try { localStorage.setItem('sha-rappel-notif', 'non'); } catch { /* stockage indisponible */ }
+      zone.hidden = true;
+    } }, icone('close'));
+    application.etatNotifications().then((etatNotif) => {
+      if (etatNotif === 'impossibles' && application.iphone() && !application.installee() && !document.documentElement.dataset.demo) {
+        zone.replaceChildren(icone('bell'), el('p', {}, el('strong', {}, 'Être prévenu(e) des réponses : '),
+          'sur iPhone, ajoutez le site à l’écran d’accueil (Partager, puis « Sur l’écran d’accueil »), puis ouvrez-le.'), fermer);
+        zone.hidden = false;
+      } else if (etatNotif === 'inactives') {
+        const activer = bouton('Activer', { class: 'btn--small btn--accent', onclick: async () => {
+          activer.disabled = true;
+          try {
+            await application.activerNotifications('/api/notifications');
+            zone.replaceChildren(icone('check'), el('p', {}, 'C’est noté : vous serez prévenu(e) à chaque réponse.'));
+            setTimeout(() => { zone.hidden = true; }, 4000);
+          } catch (e) {
+            avis(e.message);
+            activer.disabled = false;
+          }
+        } });
+        zone.replaceChildren(icone('bell'), el('p', {}, el('strong', {}, 'Être prévenu(e) des réponses'), ' par une notification sur cet appareil.'), activer, fermer);
+        zone.hidden = false;
+      }
+    });
+    return zone;
+  }
+
+  // Une notification touchée ouvre la conversation concernée (adresse « /?messages=<demande> »).
+  const lien = new URLSearchParams(location.search).get('messages');
+  if (lien) {
+    history.replaceState(null, '', location.pathname + location.hash);
+    if (/^[\w-]{4,40}$/.test(lien)) etat.projetVise = lien;
+    ouvrir();
   }
 
   function arreterSuivi() {

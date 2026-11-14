@@ -1,0 +1,34 @@
+// Mise en ligne sur Cloudflare : voir « Mettre le site en ligne » dans le README.
+{
+  "name": "sha-tattoo",
+  "main": "cloudflare/worker.js",
+  "compatibility_date": "2026-09-01",
+  // nodejs_compat : le site est écrit pour Node.js ; enable_request_signal : savoir quand une page se ferme.
+  "compatibility_flags": ["nodejs_compat", "enable_request_signal"],
+
+  // Styles, scripts, photos, flashs et vidéos : servis par Cloudflare (cloudflare/worker.js).
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+
+  // Le salon : comptes, messages, devis, photos déposées, réglages, abonnements aux notifications.
+  "durable_objects": {
+    "bindings": [{ "name": "SALON", "class_name": "Salon" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Salon"] }],
+
+  // Pas d'adresse de prévisualisation par version : Cloudflare n'en crée pas pour un site à Durable Object.
+  "preview_urls": false,
+
+  // Le nom de domaine, une fois acheté et ajouté à Cloudflare : retirer les « // » des quatre lignes
+  // ci-dessous et y mettre le vrai nom, avec et sans « www. » (et « siteUrl » dans salon.config.js).
+  // "routes": [
+  //   { "pattern": "www.sha-tattoo.fr", "custom_domain": true },
+  //   { "pattern": "sha-tattoo.fr", "custom_domain": true }
+  // ],
+
+  // Journal des erreurs, visible dans le tableau de bord de Cloudflare.
+  "observability": { "enabled": true }
+}

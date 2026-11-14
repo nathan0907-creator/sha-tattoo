@@ -16,26 +16,31 @@
  * - les photos et les flashs sont publiés par la tatoueuse depuis son espace (/salon).
  */
 
-const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { nowInZone, addDays, weekday, toMinutes, fromMinutes, isValidDate, WEEKDAYS } = require('./src/time');
 const { holidaysBetween } = require('./src/holidays');
 const { pages, notFound } = require('./src/views/pages');
+const { stockageFichiers } = require('./src/stockage');
+const notifications = require('./src/push');
 const CONFIG = require('./salon.config.js');
 
-const ROOT = __dirname;
+// En ligne sur Cloudflare (cloudflare/worker.js), il n'y a ni disque ni dossier : les données sont
+// dans la base du salon, les fichiers de public/ sont servis par Cloudflare.
+const SUR_CLOUDFLARE = typeof navigator !== 'undefined' && navigator.userAgent === 'Cloudflare-Workers';
+const ROOT = typeof __dirname === 'string' ? __dirname : '/';
 const PUBLIC = path.join(ROOT, 'public');
-const DATA = process.env.SHA_DATA || path.join(ROOT, 'data');
-const GALERIE = path.join(DATA, 'galerie');
-const CHAT = path.join(DATA, 'chat');
-const BASE = path.join(DATA, 'base.json');
-const PORT = Number(process.env.PORT) || 3100;
+const DATA = (typeof process !== 'undefined' && process.env.SHA_DATA) || path.join(ROOT, 'data');
+const PORT = Number(typeof process !== 'undefined' && process.env.PORT) || 3100;
 const AGE_MINIMUM = 18;
 const JOUR = 86400000;
+// Les fichiers déposés (photos, images des messages, vidéos) : type « galerie » (public) ou « chat » (privé).
+const GALERIE = 'galerie';
+const CHAT = 'chat';
 
-for (const d of [DATA, GALERIE, CHAT]) fs.mkdirSync(d, { recursive: true });
+/** Le stockage en service (voir src/stockage.js), choisi par initialiser(). */
+let stockage = null;
 
 /* ------------------------------------------------------------------ */
 /* Base de données : un seul fichier JSON, écrit de façon atomique.    */
@@ -215,50 +220,40 @@ function baseVide() {
   return { clients: [], sessions: {}, projets: [], galerie: [], videos: null, sha: null, reglages: {}, exceptions: [], feries: { auto: true, ouverts: [] } };
 }
 
-let db;
-try {
-  db = { ...baseVide(), ...JSON.parse(fs.readFileSync(BASE, 'utf8')) };
-} catch {
-  db = baseVide();
-}
-if (!db.reglages || typeof db.reglages !== 'object') db.reglages = {};
-if (!Array.isArray(db.exceptions)) db.exceptions = [];
+let db = baseVide();
 // Tant que la tatoueuse n'a pas réglé ses vidéos (null), ce sont celles de salon.config.js.
-if (!Array.isArray(db.videos)) db.videos = null;
 const videosActuelles = () => db.videos || CONFIG.videos || [];
-db.feries = { auto: true, ouverts: [], ...db.feries };
 
+// Enregistrement : sur l'ordinateur, peu après chaque changement ; sur Cloudflare, à la fin de
+// chaque requête (cloudflare/worker.js appelle sauverSiBesoin).
 let minuterie = null;
+let modifie = false;
 function sauver() {
+  modifie = true;
+  if (SUR_CLOUDFLARE) return;
   clearTimeout(minuterie);
   minuterie = setTimeout(sauverMaintenant, 40);
 }
 function sauverMaintenant() {
   clearTimeout(minuterie);
-  const tmp = BASE + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(db));
-  fs.renameSync(tmp, BASE);
+  modifie = false;
+  stockage.ecrireBase(db);
+}
+function sauverSiBesoin() {
+  if (modifie) sauverMaintenant();
 }
 
-// (Nettoyage des anciens flashs d'exemple, si une base créée avant en contient encore.)
-if (db.semee !== undefined || db.galerie.some((g) => g.exemple)) {
-  db.galerie = db.galerie.filter((g) => !g.exemple);
-  delete db.semee;
-  sauverMaintenant();
+/**
+ * Travaux qui continuent après la réponse (envoi des notifications, récupération d'une vidéo
+ * TikTok). Sur Cloudflare, le salon les laisse finir avant de s'endormir (travauxEnCours).
+ */
+const travaux = new Set();
+function enArrierePlan(promesse) {
+  const p = Promise.resolve(promesse).catch((e) => console.error(e)).finally(() => travaux.delete(p));
+  travaux.add(p);
+  return p;
 }
-
-// Les planches de Shannon livrées avec le site (salon.config.js, flashsDepart) : ajoutées une seule
-// fois à la galerie. Ce sont ensuite des flashs comme les autres : elle les renomme, les marque
-// « déjà tatoué » ou les retire (leur image reste dans public/img/flashs, rien n'est effacé).
-if (!db.flashsDepart && Array.isArray(CONFIG.flashsDepart)) {
-  const t = Date.now();
-  CONFIG.flashsDepart.forEach((f, i) => {
-    if (db.galerie.some((g) => g.src === f.src)) return;
-    db.galerie.push({ id: crypto.randomBytes(8).toString('hex'), type: 'flash', titre: f.titre, prix: null, src: f.src, largeur: f.largeur, hauteur: f.hauteur, dispo: true, at: t - i * 1000 });
-  });
-  db.flashsDepart = true;
-  sauverMaintenant();
-}
+const travauxEnCours = () => Promise.all([...travaux]);
 
 /* ------------------------------------------------------------------ */
 /* Outils                                                             */
@@ -292,24 +287,57 @@ function verifierMdp(mdp, stocke) {
 }
 
 // L'accès à l'espace salon : un identifiant et un mot de passe choisis par la tatoueuse.
-// Tant qu'ils ne sont pas choisis, un code de configuration (à usage unique) est créé au
-// lancement : il faut le saisir sur /salon pour choisir l'identifiant et le mot de passe.
-// (Une ancienne base qui n'avait qu'un mot de passe tiré au sort repasse par cette étape.)
-const FICHIER_CODE = path.join(DATA, 'CODE-DE-CONFIGURATION.txt');
+// Tant qu'ils ne sont pas choisis, il faut un code de configuration (à usage unique), à saisir sur
+// /salon : sur l'ordinateur, il est tiré au sort à chaque lancement (data/CODE-DE-CONFIGURATION.txt) ;
+// en ligne, c'est le secret SETUP_CODE choisi dans Cloudflare.
 let codeConfiguration = null;
 const accesConfigure = () => Boolean(db.sha && db.sha.identifiant && db.sha.mdp);
-if (!accesConfigure()) {
-  db.sha = null;
-  // Les anciennes connexions à l'espace salon ne valent plus.
-  for (const [k, s] of Object.entries(db.sessions || {})) if (s.qui === 'sha') delete db.sessions[k];
+
+/**
+ * Démarre le site sur un stockage : lit les données, les complète, prépare l'accès au salon.
+ *   code : le code de configuration imposé (Cloudflare) ; sinon un code est tiré au sort.
+ */
+function initialiser(nouveauStockage, { code = '' } = {}) {
+  stockage = nouveauStockage;
+  db = { ...baseVide(), ...(stockage.lireBase() || {}) };
+  if (!db.reglages || typeof db.reglages !== 'object') db.reglages = {};
+  if (!Array.isArray(db.exceptions)) db.exceptions = [];
+  if (!Array.isArray(db.videos)) db.videos = null;
+  if (!Array.isArray(db.abonnements)) db.abonnements = [];
+  db.feries = { auto: true, ouverts: [], ...db.feries };
+
+  // (Nettoyage des anciens flashs d'exemple, si une base créée avant en contient encore.)
+  if (db.semee !== undefined || db.galerie.some((g) => g.exemple)) {
+    db.galerie = db.galerie.filter((g) => !g.exemple);
+    delete db.semee;
+  }
+
+  // Les planches de Shannon livrées avec le site (salon.config.js, flashsDepart) : ajoutées une seule
+  // fois à la galerie. Ce sont ensuite des flashs comme les autres : elle les renomme, les marque
+  // « déjà tatoué » ou les retire (leur image reste dans public/img/flashs, rien n'est effacé).
+  if (!db.flashsDepart && Array.isArray(CONFIG.flashsDepart)) {
+    const t = Date.now();
+    CONFIG.flashsDepart.forEach((f, i) => {
+      if (db.galerie.some((g) => g.src === f.src)) return;
+      db.galerie.push({ id: crypto.randomBytes(8).toString('hex'), type: 'flash', titre: f.titre, prix: null, src: f.src, largeur: f.largeur, hauteur: f.hauteur, dispo: true, at: t - i * 1000 });
+    });
+    db.flashsDepart = true;
+  }
+
+  for (const [k, s] of Object.entries(db.sessions)) if (s.exp < Date.now()) delete db.sessions[k];
+
+  codeConfiguration = null;
+  if (!accesConfigure()) {
+    db.sha = null;
+    // Les anciennes connexions à l'espace salon ne valent plus.
+    for (const [k, s] of Object.entries(db.sessions || {})) if (s.qui === 'sha') delete db.sessions[k];
+    if (code) codeConfiguration = String(code);
+    else {
+      codeConfiguration = crypto.randomInt(0, 1e8).toString().padStart(8, '0').replace(/(\d{4})(\d{4})/, '$1-$2');
+      stockage.noterCode(codeConfiguration);
+    }
+  }
   sauverMaintenant();
-  codeConfiguration = crypto.randomInt(0, 1e8).toString().padStart(8, '0').replace(/(\d{4})(\d{4})/, '$1-$2');
-  fs.writeFileSync(
-    FICHIER_CODE,
-    `Code de configuration de l'espace salon (adresse du site + /salon) :\n\n  ${codeConfiguration}\n\nIl sert une seule fois, pour choisir l'identifiant et le mot de passe.\nUn nouveau code est créé à chaque lancement tant que l'accès n'est pas configuré.\n`,
-  );
-  fs.rmSync(path.join(DATA, 'MOT-DE-PASSE-SHA.txt'), { force: true });
-  console.log(`\n  Espace salon à configurer : code ${codeConfiguration}\n  (aussi noté dans data/CODE-DE-CONFIGURATION.txt)\n`);
 }
 
 function identifiantValide(v) {
@@ -384,8 +412,13 @@ function enregistrerImage(dataUrl, dossier) {
   if (buf.length > 4 * 1024 * 1024) throw new Erreur(413, 'Image trop lourde (4 Mo maximum).');
   if (!SIGNATURES[ext](buf)) throw new Erreur(400, 'Le fichier ne correspond pas à une image valide.');
   const nom = `${Date.now().toString(36)}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
-  fs.writeFileSync(path.join(dossier, nom), buf);
+  stockage.ecrire(dossier, nom, buf);
   return nom;
+}
+
+/** Efface un fichier déposé dont on connaît l'adresse publique (« /galerie/… »). */
+function effacerDeLaGalerie(src) {
+  if (/^\/galerie\//.test(src || '')) stockage.supprimer(GALERIE, path.basename(src));
 }
 
 /* ------------------------------------------------------------------ */
@@ -393,9 +426,8 @@ function enregistrerImage(dataUrl, dossier) {
 /* ------------------------------------------------------------------ */
 
 const COOKIE = { client: 'sha_client', sha: 'sha_atelier' };
-const DUREE = { client: 30 * JOUR, sha: 12 * 3600000 };
-
-for (const [k, s] of Object.entries(db.sessions)) if (s.exp < Date.now()) delete db.sessions[k];
+// La tatoueuse reste connectée un mois sur son appareil (application installée, notifications).
+const DUREE = { client: 30 * JOUR, sha: 30 * JOUR };
 
 function lireCookies(req) {
   const out = {};
@@ -606,8 +638,73 @@ function projet(pid) {
 
 function ajouterMessage(p, de, texteMsg, image = null) {
   if (p.messages.length >= 600) throw new Erreur(400, 'Cette conversation est pleine : ouvrez une nouvelle demande.');
-  p.messages.push({ id: id(), de, texte: texteMsg, image, at: Date.now() });
+  const m = { id: id(), de, texte: texteMsg, image, at: Date.now() };
+  p.messages.push(m);
   p.maj = Date.now();
+  aPrevenir(p, m);
+}
+
+/* ------------------------------------------------------------------ */
+/* Notifications : l'autre personne est prévenue de chaque nouveauté   */
+/* ------------------------------------------------------------------ */
+
+// Pendant une requête : qui agit (la tatoueuse sur /api/sha/…, sinon le client), et les demandes
+// où quelque chose de nouveau s'est passé. Une seule notification par demande et par requête, avec
+// le message le plus parlant (celui d'une personne plutôt qu'une ligne automatique).
+let acteur = null;
+const nouveautes = new Map();
+// L'adresse sous laquelle le site est visité (https://…workers.dev, puis le nom de domaine).
+let origineConnue = '';
+
+function aPrevenir(p, m) {
+  if (!acteur) return;
+  const deja = nouveautes.get(p.id);
+  if (!deja || (deja.m.de === 'systeme' && m.de !== 'systeme')) nouveautes.set(p.id, { p, m });
+}
+
+const resume = (m) => (m.texte ? m.texte.replace(/\s+/g, ' ').slice(0, 140) : m.image ? 'Photo' : 'Nouveau message');
+
+/** Les clés du site pour les notifications (créées une fois, gardées avec les données). */
+function clesPush() {
+  if (!db.push || !db.push.publicKey) {
+    db.push = notifications.generateKeys();
+    sauver();
+  }
+  return db.push;
+}
+
+/** Envoie une notification à chaque appareil abonné de la personne ; oublie ceux qui n'existent plus. */
+function notifier(cible, message) {
+  const abonnes = db.abonnements.filter((a) => a.qui === cible.qui && a.id === cible.id);
+  if (!abonnes.length) return;
+  const cles = clesPush();
+  // L'adresse du site, que les services de notification (Apple surtout) demandent à connaître.
+  const sujet = CONFIG.siteUrl || (/^https:/.test(origineConnue) ? origineConnue : 'mailto:contact@sha-tattoo.invalid');
+  enArrierePlan(Promise.all(abonnes.map(async (a) => {
+    try {
+      const r = await notifications.sendPush(a, message, { keys: cles, subject: sujet, ttl: 24 * 3600 });
+      if (r.gone) {
+        db.abonnements = db.abonnements.filter((x) => x.endpoint !== a.endpoint);
+        sauver();
+      }
+    } catch { /* service injoignable : la notification est perdue, le message reste sur le site */ }
+  })));
+}
+
+/** À la fin d'une requête : prévenir l'autre personne de ce qui vient de se passer. */
+function envoyerNouveautes() {
+  for (const { p, m } of nouveautes.values()) {
+    if (acteur === 'sha') {
+      if (!p.client) continue; // rendez-vous pris pour une personne sans compte
+      const nonLus = db.projets.filter((x) => x.client === p.client).reduce((n, x) => n + (x.messages.length - x.vuClient), 0);
+      notifier({ qui: 'client', id: p.client }, { title: reglages().nom, body: resume(m), url: '/?messages=' + p.id, tag: 'projet-' + p.id, badge: nonLus });
+    } else {
+      const c = db.clients.find((x) => x.id === p.client);
+      const nonLus = db.projets.reduce((n, x) => n + (x.messages.length - (x.vuSha || 0)), 0);
+      notifier({ qui: 'sha', id: 'sha' }, { title: `${c ? `${c.prenom} ${c.nom}` : 'Client'} · ${p.titre}`, body: resume(m), url: '/salon?demande=' + p.id, tag: 'projet-' + p.id, badge: nonLus });
+    }
+  }
+  nouveautes.clear();
 }
 
 function infoFlash(fid) {
@@ -882,7 +979,45 @@ route('POST', '/api/projets/([\\w-]+)/acompte', (req, res, corps, [pid]) => {
 route('GET', '/api/projets/([\\w-]+)/images/([\\w.-]+)', (req, res, corps, [pid, fichier]) => {
   const p = session(req, 'sha') ? projet(pid) : projetDe(clientConnecte(req), pid);
   if (!p.messages.some((m) => m.image === fichier)) throw new Erreur(404, 'Image introuvable.');
-  return { fichier: path.join(CHAT, fichier), prive: true };
+  return { prive: true, type: CHAT, nom: fichier };
+});
+
+// --- Notifications : un appareil s'abonne (client connecté, ou la tatoueuse dans son espace)
+route('GET', '/api/notifications/cle', () => ({ cle: clesPush().publicKey }));
+
+function abonner(qui, idPersonne, corps) {
+  const a = notifications.readSubscription(corps);
+  if (!a) throw new Erreur(400, 'Abonnement aux notifications non reconnu.');
+  db.abonnements = db.abonnements.filter((x) => x.endpoint !== a.endpoint);
+  db.abonnements.push({ ...a, qui, id: idPersonne, at: Date.now() });
+  // Pas plus de 10 appareils par personne : les plus anciens sont oubliés.
+  const siens = db.abonnements.filter((x) => x.qui === qui && x.id === idPersonne);
+  if (siens.length > 10) db.abonnements = db.abonnements.filter((x) => !siens.slice(0, siens.length - 10).includes(x));
+  sauver();
+  return { ok: true };
+}
+function desabonner(corps) {
+  db.abonnements = db.abonnements.filter((x) => x.endpoint !== String(corps.endpoint || ''));
+  sauver();
+  return { ok: true };
+}
+
+route('POST', '/api/notifications', (req, res, corps) => abonner('client', clientConnecte(req).id, corps));
+route('DELETE', '/api/notifications', (req, res, corps) => desabonner(corps));
+route('POST', '/api/sha/notifications', (req, res, corps) => {
+  exigerSha(req);
+  return abonner('sha', 'sha', corps);
+});
+route('DELETE', '/api/sha/notifications', (req, res, corps) => {
+  exigerSha(req);
+  return desabonner(corps);
+});
+// Un essai, pour que la tatoueuse voie à quoi ressemble une notification.
+route('POST', '/api/sha/notifications/essai', (req) => {
+  exigerSha(req);
+  if (!db.abonnements.some((a) => a.qui === 'sha')) throw new Erreur(400, 'Activez d’abord les notifications sur cet appareil.');
+  notifier({ qui: 'sha', id: 'sha' }, { title: reglages().nom, body: 'Les notifications fonctionnent : vous serez prévenue de chaque nouveau message.', url: '/salon', tag: 'essai' });
+  return { ok: true };
 });
 
 // --- Espace salon
@@ -892,14 +1027,16 @@ route('GET', '/api/sha/etat', () => ({ configure: accesConfigure() }));
 route('POST', '/api/sha/configurer', (req, res, corps) => {
   limiter(req, 'sha-config', 6);
   if (accesConfigure()) throw new Erreur(409, 'L’accès est déjà configuré : connectez-vous.');
-  const saisi = String(corps.code || '').replace(/\D/g, '');
-  const attendu = codeConfiguration.replace(/\D/g, '');
+  // En ligne, sans secret SETUP_CODE dans Cloudflare, personne ne peut configurer l'accès.
+  if (!codeConfiguration) throw new Erreur(503, 'Aucun code de configuration : ajoutez le secret SETUP_CODE dans Cloudflare.');
+  const saisi = String(corps.code || '').replace(/\s/g, '').replace(/-/g, '');
+  const attendu = codeConfiguration.replace(/\s/g, '').replace(/-/g, '');
   if (saisi.length !== attendu.length || !crypto.timingSafeEqual(Buffer.from(saisi), Buffer.from(attendu))) {
     throw new Erreur(403, 'Code de configuration incorrect.');
   }
   db.sha = { identifiant: identifiantValide(corps.identifiant), mdp: hacher(nouveauMotDePasse(corps.motDePasse)) };
   codeConfiguration = null;
-  fs.rmSync(FICHIER_CODE, { force: true });
+  stockage.oublierCode();
   sauver();
   ouvrirSession(req, res, 'sha', 'sha');
   return { ok: true };
@@ -1074,7 +1211,7 @@ route('DELETE', '/api/sha/galerie/([\\w-]+)', (req, res, corps, [gid]) => {
   const i = db.galerie.findIndex((x) => x.id === gid);
   if (i < 0) throw new Erreur(404, 'Image introuvable.');
   const [g] = db.galerie.splice(i, 1);
-  if (g.src.startsWith('/galerie/')) fs.rmSync(path.join(GALERIE, path.basename(g.src)), { force: true });
+  effacerDeLaGalerie(g.src);
   sauver();
   return { ok: true };
 });
@@ -1087,7 +1224,7 @@ route('GET', '/api/sha/reglages', (req) => {
 // La photo de profil : le médaillon affiché à côté du nom du salon.
 function changerProfil(src) {
   const ancien = reglages().profil;
-  if (ancien.startsWith('/galerie/')) fs.rmSync(path.join(GALERIE, path.basename(ancien)), { force: true });
+  effacerDeLaGalerie(ancien);
   garderLesChangements({ ...reglages(), profil: src });
   sauver();
   return reglages();
@@ -1162,11 +1299,11 @@ function remplacerVideos(liste) {
   for (const v of anciennes.values()) {
     if (db.videos.some((x) => x.id === v.id)) continue;
     for (const f of [v.vignette, v.fichier]) {
-      if (/^\/galerie\//.test(f || '')) fs.rmSync(path.join(GALERIE, path.basename(f)), { force: true });
+      effacerDeLaGalerie(f);
     }
   }
   // La vignette et le fichier vidéo sont cherchés après coup : la page de réglages n'attend pas TikTok.
-  if (!process.env.SHA_SANS_RESEAU) for (const v of db.videos.filter((x) => !x.fichier || !x.vignette)) chercherVideo(v);
+  if (!(typeof process !== 'undefined' && process.env.SHA_SANS_RESEAU)) for (const v of db.videos.filter((x) => !x.fichier || !x.vignette)) enArrierePlan(chercherVideo(v));
 }
 
 /**
@@ -1198,7 +1335,7 @@ async function chercherVideo(v) {
       // Un vrai MP4 commence par une boîte « ftyp ».
       if (vid && vid.buf.subarray(4, 8).toString() === 'ftyp') {
         const nom = `${Date.now().toString(36)}-${crypto.randomBytes(6).toString('hex')}.mp4`;
-        fs.writeFileSync(path.join(GALERIE, nom), vid.buf);
+        stockage.ecrire(GALERIE, nom, vid.buf);
         v.fichier = '/galerie/' + nom;
       }
     }
@@ -1325,6 +1462,7 @@ const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
   '.json': 'application/json', '.txt': 'text/plain; charset=utf-8', '.mp4': 'video/mp4',
+  '.webmanifest': 'application/manifest+json',
 };
 
 // Les mêmes en-têtes de sécurité que le site de Cyrille (le plan Google Maps est la seule page extérieure).
@@ -1350,37 +1488,63 @@ const ENTETES = {
   'Cross-Origin-Opener-Policy': 'same-origin',
 };
 
+/** La plage demandée (« Range ») d'un fichier de cette taille : null = tout le fichier, false = impossible. */
+function plageDemandee(req, taille) {
+  const plage = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+  if (!plage || (!plage[1] && !plage[2])) return null;
+  const debut = plage[1] ? Number(plage[1]) : Math.max(0, taille - Number(plage[2]));
+  const fin = plage[1] && plage[2] ? Math.min(Number(plage[2]), taille - 1) : taille - 1;
+  return debut > fin || debut >= taille ? false : { debut, fin };
+}
+
+/**
+ * Envoie un fichier : en entier, ou par morceaux (Safari et l'iPhone ne lisent une vidéo qu'ainsi).
+ * lire(debut, fin) → ce qu'il faut envoyer (un Buffer, ou un flux sur l'ordinateur).
+ */
+function envoyerContenu(req, res, { taille, type, cache, etag, lire }) {
+  if (req.headers['if-none-match'] === etag) {
+    res.writeHead(304, { ETag: etag, 'Cache-Control': cache });
+    return res.end();
+  }
+  const entetes = { ...ENTETES, ETag: etag, 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': cache };
+  const plage = plageDemandee(req, taille);
+  if (plage === false) {
+    res.writeHead(416, { 'Content-Range': `bytes */${taille}` });
+    return res.end();
+  }
+  const { debut, fin } = plage || { debut: 0, fin: taille - 1 };
+  res.writeHead(plage ? 206 : 200, { ...entetes, 'Content-Length': taille ? fin - debut + 1 : 0, ...(plage && { 'Content-Range': `bytes ${debut}-${fin}/${taille}` }) });
+  if (req.method === 'HEAD' || !taille) return res.end();
+  const contenu = lire(debut, fin);
+  if (Buffer.isBuffer(contenu)) return res.end(contenu);
+  contenu.pipe(res);
+}
+
+/** Un fichier de public/ (sur l'ordinateur seulement : en ligne, Cloudflare les sert lui-même). */
 function envoyerFichier(req, res, fichier, cache) {
   fs.stat(fichier, (err, st) => {
     if (err || !st.isFile()) return envoyerJson(res, 404, { erreur: 'Introuvable.' });
-    const etag = `"${st.size.toString(36)}-${Math.floor(st.mtimeMs).toString(36)}"`;
-    if (req.headers['if-none-match'] === etag) {
-      res.writeHead(304, { ETag: etag, 'Cache-Control': cache });
-      return res.end();
-    }
-    const entetes = {
-      ...ENTETES,
-      ETag: etag,
-      'Content-Type': TYPES[path.extname(fichier).toLowerCase()] || 'application/octet-stream',
-      'Accept-Ranges': 'bytes',
-      'Cache-Control': cache,
-    };
-    // Lecture par morceaux (« Range ») : Safari et l'iPhone ne lisent une vidéo qu'ainsi.
-    const plage = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
-    if (plage && (plage[1] || plage[2])) {
-      let debut = plage[1] ? Number(plage[1]) : Math.max(0, st.size - Number(plage[2]));
-      let fin = plage[1] && plage[2] ? Math.min(Number(plage[2]), st.size - 1) : st.size - 1;
-      if (debut > fin || debut >= st.size) {
-        res.writeHead(416, { 'Content-Range': `bytes */${st.size}` });
-        return res.end();
-      }
-      res.writeHead(206, { ...entetes, 'Content-Range': `bytes ${debut}-${fin}/${st.size}`, 'Content-Length': fin - debut + 1 });
-      if (req.method === 'HEAD') return res.end();
-      return fs.createReadStream(fichier, { start: debut, end: fin }).pipe(res);
-    }
-    res.writeHead(200, { ...entetes, 'Content-Length': st.size });
-    if (req.method === 'HEAD') return res.end();
-    fs.createReadStream(fichier).pipe(res);
+    envoyerContenu(req, res, {
+      taille: st.size,
+      type: TYPES[path.extname(fichier).toLowerCase()] || 'application/octet-stream',
+      cache,
+      etag: `"${st.size.toString(36)}-${Math.floor(st.mtimeMs).toString(36)}"`,
+      lire: (debut, fin) => fs.createReadStream(fichier, { start: debut, end: fin }),
+    });
+  });
+}
+
+/** Un fichier déposé (galerie, images des messages), lu dans le stockage. */
+function envoyerDepose(req, res, type, nom, cache) {
+  const octets = stockage.lire(type, nom);
+  if (!octets) return envoyerJson(res, 404, { erreur: 'Introuvable.' });
+  envoyerContenu(req, res, {
+    taille: octets.length,
+    type: TYPES[path.extname(nom).toLowerCase()] || 'application/octet-stream',
+    cache,
+    // Le nom d'un fichier déposé ne sert qu'une fois : il suffit à l'identifier.
+    etag: `"${nom}"`,
+    lire: (debut, fin) => octets.subarray(debut, fin + 1),
   });
 }
 
@@ -1395,29 +1559,23 @@ function envoyerTexte(req, res, status, type, corps) {
   res.end(req.method === 'HEAD' ? undefined : buf);
 }
 
-function lireCorps(req, limite) {
-  return new Promise((resolve, reject) => {
-    if (req.method === 'GET' || req.method === 'HEAD') return resolve({});
-    let taille = 0;
-    const morceaux = [];
-    req.on('data', (c) => {
-      taille += c.length;
-      if (taille > limite) {
-        reject(new Erreur(413, 'Envoi trop volumineux.'));
-        req.destroy();
-      } else morceaux.push(c);
-    });
-    req.on('end', () => {
-      if (!morceaux.length) return resolve({});
-      try {
-        const v = JSON.parse(Buffer.concat(morceaux).toString('utf8'));
-        resolve(v && typeof v === 'object' ? v : {});
-      } catch {
-        reject(new Erreur(400, 'Requête invalide.'));
-      }
-    });
-    req.on('error', reject);
-  });
+/** Le corps JSON d'une requête (lu morceau par morceau : sur l'ordinateur comme sur Cloudflare). */
+async function lireCorps(req, limite) {
+  if (req.method === 'GET' || req.method === 'HEAD') return {};
+  let taille = 0;
+  const morceaux = [];
+  for await (const c of req) {
+    taille += c.length;
+    if (taille > limite) throw new Erreur(413, 'Envoi trop volumineux.');
+    morceaux.push(Buffer.from(c));
+  }
+  if (!morceaux.length) return {};
+  try {
+    const v = JSON.parse(Buffer.concat(morceaux).toString('utf8'));
+    return v && typeof v === 'object' ? v : {};
+  } catch {
+    throw new Erreur(400, 'Requête invalide.');
+  }
 }
 
 function memeOrigine(req) {
@@ -1450,8 +1608,19 @@ async function gerer(req, res) {
       // Une demande peut porter plusieurs photos (emplacement, référence).
       const limite = /^\/api\/projets$/.test(chemin) ? 14 * 1024 * 1024 : /galerie|messages/.test(chemin) ? 6 * 1024 * 1024 : 32 * 1024;
       const corps = await lireCorps(req, limite);
-      const resultat = await r.fn(req, res, corps, r.motif.exec(chemin).slice(1));
-      if (resultat && resultat.prive) return envoyerFichier(req, res, resultat.fichier, 'private, max-age=86400');
+      if (/^[\w.:-]+$/.test(req.headers.host || '')) origineConnue = `${securise(req) ? 'https' : 'http'}://${req.headers.host}`;
+      // Qui agit : ce qui est nouveau sera annoncé à l'autre personne (notifications).
+      acteur = chemin.startsWith('/api/sha/') ? 'sha' : 'client';
+      nouveautes.clear();
+      let resultat;
+      try {
+        resultat = await r.fn(req, res, corps, r.motif.exec(chemin).slice(1));
+        envoyerNouveautes();
+      } finally {
+        acteur = null;
+        nouveautes.clear();
+      }
+      if (resultat && resultat.prive) return envoyerDepose(req, res, resultat.type, resultat.nom, 'private, max-age=86400');
       return envoyerJson(res, 200, resultat ?? { ok: true });
     } catch (e) {
       if (!(e instanceof Erreur)) console.error(e);
@@ -1473,18 +1642,26 @@ async function gerer(req, res) {
 
   // Les images publiées par le salon, puis les fichiers du site
   const m = /^\/galerie\/([\w-]+\.(?:jpg|png|webp|mp4))$/.exec(chemin);
-  if (m) return envoyerFichier(req, res, path.join(GALERIE, m[1]), 'public, max-age=31536000, immutable');
+  if (m) return envoyerDepose(req, res, GALERIE, m[1], 'public, max-age=31536000, immutable');
 
-  const fichier = path.join(PUBLIC, chemin);
-  const existe = fichier.startsWith(PUBLIC + path.sep) && fs.existsSync(fichier) && fs.statSync(fichier).isFile();
-  // HTML, CSS et JS : toujours revalidés, pour qu'une mise à jour du site se voie immédiatement.
-  if (existe) return envoyerFichier(req, res, fichier, /\.(css|js)$/.test(fichier) ? 'no-cache' : 'public, max-age=86400');
+  // Les fichiers de public/ (en ligne, Cloudflare les a déjà servis avant d'arriver ici).
+  if (!SUR_CLOUDFLARE) {
+    const fichier = path.join(PUBLIC, chemin);
+    const existe = fichier.startsWith(PUBLIC + path.sep) && fs.existsSync(fichier) && fs.statSync(fichier).isFile();
+    // HTML, CSS, JS et le « service worker » : toujours revalidés, pour qu'une mise à jour se voie immédiatement.
+    if (existe) return envoyerFichier(req, res, fichier, /\.(css|js|webmanifest)$/.test(fichier) ? 'no-cache' : 'public, max-age=86400');
+  }
 
   // Adresse inconnue : la page « Erratum ».
   return envoyerTexte(req, res, 404, TYPES['.html'], notFound(contexte(req, chemin)));
 }
 
-if (require.main === module) {
+// Sur l'ordinateur (npm start, les tests, la démo), le site démarre tout de suite sur le dossier
+// data/. Sur Cloudflare, c'est le salon (cloudflare/worker.js) qui l'initialise sur sa base.
+if (!SUR_CLOUDFLARE) initialiser(stockageFichiers(DATA));
+
+if (typeof require !== 'undefined' && require.main === module) {
+  const http = require('node:http');
   const serveur = http.createServer((req, res) => {
     gerer(req, res).catch((e) => {
       console.error(e);
@@ -1504,4 +1681,7 @@ if (require.main === module) {
   process.on('SIGTERM', arreter);
 }
 
-module.exports = { gerer, ageAu, contactValide, naissanceValide, lienPaypal, sauverMaintenant };
+module.exports = {
+  gerer, initialiser, sauverMaintenant, sauverSiBesoin, travauxEnCours, ENTETES, TYPES,
+  ageAu, contactValide, naissanceValide, lienPaypal,
+};

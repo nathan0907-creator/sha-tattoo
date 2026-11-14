@@ -101,6 +101,87 @@ test('animation tatouage : la demande de devis (type, date, lieu), sans photo', 
   assert.ok((liste.projets || liste).some((p) => p.id === r.corps.id));
 });
 
+test('notifications : la tatoueuse est prévenue des messages des clients, et le client de ses réponses', async () => {
+  const { travauxEnCours } = require('../server.js');
+  const crypto = require('node:crypto');
+  // Un faux service de notification : on garde ce qui lui est envoyé.
+  const recus = [];
+  const vraiFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).startsWith('https://fcm.googleapis.com/')) {
+      recus.push({ url: String(url), options });
+      return new Response(null, { status: String(url).endsWith('/disparu') ? 410 : 201 });
+    }
+    return vraiFetch(url, options);
+  };
+  const appareil = (nom) => {
+    const ecdh = crypto.createECDH('prime256v1');
+    ecdh.generateKeys();
+    return { endpoint: 'https://fcm.googleapis.com/fcm/send/' + nom, keys: { p256dh: ecdh.getPublicKey().toString('base64url'), auth: crypto.randomBytes(16).toString('base64url') } };
+  };
+  try {
+    const client = navigateur();
+    await client('POST', '/api/inscription', { telephone: '07 55 44 33 22', prenom: 'Lina', nom: 'Roux', motDePasse: 'motdepasse1', naissance: ilYa(25) });
+    // La clé publique du site, puis les abonnements (refusés vers une adresse qui n'est pas un service connu)
+    const { cle } = (await client('GET', '/api/notifications/cle')).corps;
+    assert.strictEqual(Buffer.from(cle, 'base64url').length, 65);
+    assert.strictEqual((await client('POST', '/api/notifications', { ...appareil('x'), endpoint: 'https://pirate.example/x' })).status, 400);
+    assert.strictEqual((await client('POST', '/api/notifications', appareil('client-lina'))).status, 200);
+    assert.strictEqual((await navigateur()('POST', '/api/notifications', appareil('anonyme'))).status, 401, 'il faut un compte');
+    const sha = await salon();
+    assert.strictEqual((await sha('POST', '/api/sha/notifications', appareil('salon'))).status, 200);
+    assert.strictEqual((await sha('POST', '/api/sha/notifications', appareil('disparu'))).status, 200);
+
+    // Le client écrit : la tatoueuse est prévenue (sur ses deux appareils), pas le client
+    const p = (await client('POST', '/api/projets', { reference: png, emplacement: 'Poignet', taille: '4 cm', texte: 'Une petite étoile.' })).corps;
+    await travauxEnCours();
+    assert.deepStrictEqual(recus.map((r) => r.url.split('/').pop()).sort(), ['disparu', 'salon']);
+    const envoi = recus[0].options;
+    assert.match(envoi.headers.Authorization, /^vapid t=[\w-]+\.[\w-]+\.[\w-]+, k=/);
+    assert.strictEqual(envoi.headers['Content-Encoding'], 'aes128gcm');
+    assert.ok(!Buffer.from(envoi.body).toString('latin1').includes('étoile'), 'le message part chiffré');
+
+    // L'appareil disparu (réponse 410) est oublié : au message suivant, seul « salon » reçoit
+    recus.length = 0;
+    await client('POST', `/api/projets/${p.id}/messages`, { texte: 'Plutôt 5 cm.' });
+    await travauxEnCours();
+    assert.deepStrictEqual(recus.map((r) => r.url.split('/').pop()), ['salon']);
+
+    // La tatoueuse répond, puis envoie le devis : le client est prévenu (une notification par action)
+    recus.length = 0;
+    await sha('POST', `/api/sha/projets/${p.id}/messages`, { texte: 'Avec plaisir !' });
+    await sha('POST', `/api/sha/projets/${p.id}/devis`, { prix: 60, acompte: 20, duree: 30 });
+    await travauxEnCours();
+    assert.deepStrictEqual(recus.map((r) => r.url.split('/').pop()), ['client-lina', 'client-lina']);
+
+    // Un essai depuis l'espace salon
+    recus.length = 0;
+    assert.strictEqual((await sha('POST', '/api/sha/notifications/essai')).status, 200);
+    await travauxEnCours();
+    assert.strictEqual(recus.length, 1);
+  } finally {
+    globalThis.fetch = vraiFetch;
+  }
+});
+
+test('application installable : manifestes, icônes et service worker', async () => {
+  const une = (await page('/')).html;
+  assert.ok(une.includes('<link rel="manifest" href="/manifest.webmanifest">'));
+  assert.ok(une.includes('<link rel="apple-touch-icon" href="/img/icones/apple-touch-icon.png">'));
+  assert.ok((await page('/salon')).html.includes('<link rel="manifest" href="/manifest-salon.webmanifest">'));
+  for (const fichier of ['/manifest.webmanifest', '/manifest-salon.webmanifest']) {
+    const r = await fetch(base + fichier);
+    assert.strictEqual(r.headers.get('content-type'), 'application/manifest+json');
+    const m = await r.json();
+    assert.strictEqual(m.display, 'standalone');
+    for (const i of m.icons) assert.strictEqual((await fetch(new URL(i.src, base + fichier))).status, 200, i.src);
+    assert.ok(m.icons.some((i) => i.purpose === 'maskable') && m.icons.some((i) => i.sizes === '512x512'));
+  }
+  const sw = await fetch(base + '/sw.js');
+  assert.strictEqual(sw.status, 200);
+  assert.match(await sw.text(), /addEventListener\('push'/);
+});
+
 test('âge et contact', () => {
   assert.strictEqual(ageAu('2000-06-15', new Date(2018, 5, 14)), 17);
   assert.strictEqual(ageAu('2000-06-15', new Date(2018, 5, 15)), 18);

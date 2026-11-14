@@ -34,6 +34,14 @@
   }
 
   async function demarrer() {
+    // Une notification touchée ouvre la demande concernée (adresse « /salon?demande=<demande> »).
+    const lien = new URLSearchParams(location.search).get('demande');
+    if (lien && /^[\w-]{4,40}$/.test(lien)) {
+      history.replaceState(null, '', location.pathname);
+      etat.onglet = 'demandes';
+      etat.filtre = 'tous';
+      etat.projetId = lien;
+    }
     try {
       etat.projets = await api('GET', '/api/sha/projets');
       coquille();
@@ -61,7 +69,7 @@
       : el('form', { class: 'connexion formulaire' },
           el('a', { href: '/', class: 'brand' }, nom),
           el('h1', { class: 'connexion-titre' }, 'Première connexion'),
-          el('p', { class: 'field-hint' }, 'Choisissez l’identifiant et le mot de passe qui protégeront votre espace. Le code de configuration se trouve dans le fichier data/CODE-DE-CONFIGURATION.txt du site.'),
+          el('p', { class: 'field-hint' }, 'Choisissez l’identifiant et le mot de passe qui protégeront votre espace. Le code de configuration vous a été donné à la mise en ligne du site.'),
           champ('Code de configuration', { name: 'code', id: 'c-code', required: true, inputmode: 'numeric', autocomplete: 'one-time-code', placeholder: '0000-0000' }),
           champ('Identifiant', { name: 'identifiant', id: 'c-id', required: true, autocomplete: 'username', autocapitalize: 'off', spellcheck: 'false', minlength: 3, maxlength: 40 }, 'Lettres, chiffres, point ou tiret.'),
           champ('Mot de passe', { name: 'motDePasse', id: 'c-mdp', type: 'password', required: true, minlength: 10, autocomplete: 'new-password' }, '10 caractères minimum.'),
@@ -95,14 +103,88 @@
     const nav = el('nav', { class: 'onglets-espace', 'aria-label': 'Rubriques' },
       ONGLETS.map(([k, nom, ic]) => el('button', { type: 'button', 'aria-current': etat.onglet === k ? 'page' : null, onclick: () => { etat.onglet = k; etat.projetId = null; coquille(); } },
         icone(ic), el('span', {}, nom), k === 'demandes' && nonLus ? el('b', { class: 'pastille-inline' }, String(nonLus)) : null)));
+    const panneau = panneauAppli();
+    const cloche = el('button', { type: 'button', class: 'icon-btn cloche', 'aria-label': 'Notifications et application', title: 'Notifications et application', 'aria-expanded': 'false',
+      onclick: () => { panneau.hidden = !panneau.hidden; cloche.setAttribute('aria-expanded', String(!panneau.hidden)); if (!panneau.hidden) panneau.rafraichir(); } }, icone('bell'));
     const barre = el('header', { class: 'barre' },
       el('a', { href: '/', class: 'brand', title: 'Voir le site' }, document.title.split(' · ').at(-1)),
       nav,
-      el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Se déconnecter', title: 'Se déconnecter', onclick: async () => { await api('POST', '/api/sha/deconnexion').catch(() => {}); vueConnexion(); } }, icone('logout')));
+      el('div', { class: 'barre-outils' }, cloche,
+        el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Se déconnecter', title: 'Se déconnecter', onclick: async () => { await api('POST', '/api/sha/deconnexion').catch(() => {}); vueConnexion(); } }, icone('logout'))));
     const zone = el('div', { class: 'zone' });
-    app.replaceChildren(barre, zone);
+    app.replaceChildren(barre, panneau, zone);
+    // À la première visite (ou tant que ce n'est pas fait), proposer les notifications.
+    Sha.application.etatNotifications().then((e) => {
+      let vu = false;
+      try { vu = localStorage.getItem('sha-salon-notif') === 'vu'; } catch { /* stockage indisponible */ }
+      cloche.classList.toggle('cloche--a-faire', e === 'inactives');
+      if (e === 'inactives' && !vu) {
+        try { localStorage.setItem('sha-salon-notif', 'vu'); } catch { /* stockage indisponible */ }
+        panneau.hidden = false;
+        cloche.setAttribute('aria-expanded', 'true');
+        panneau.rafraichir();
+      }
+    });
     stopper();
     ({ demandes: vueDemandes, agenda: vueAgenda, fermetures: vueFermetures, galerie: vueGalerie, reglages: vueReglages })[etat.onglet](zone);
+  }
+
+  /**
+   * Le panneau de la cloche : les notifications de nouveaux messages sur cet appareil, et
+   * l'installation de l'espace salon comme une application.
+   */
+  function panneauAppli() {
+    const { application } = Sha;
+    const corpsPanneau = el('div', { class: 'panneau-appli-corps' });
+    const panneau = el('section', { class: 'panneau-appli', hidden: true, 'aria-label': 'Notifications et application' },
+      el('button', { type: 'button', class: 'icon-btn panneau-appli-fermer', 'aria-label': 'Fermer', onclick: () => { panneau.hidden = true; } }, icone('close')),
+      corpsPanneau);
+
+    panneau.rafraichir = async () => {
+      const etatNotif = await application.etatNotifications();
+      const lignes = [];
+      const action = (libelle, classe, fn) => {
+        const b = bouton(libelle, { class: 'btn--small ' + classe, onclick: async () => {
+          b.classList.add('occupe');
+          try { await fn(); } catch (e) { avis(e.message); }
+          b.classList.remove('occupe');
+          panneau.rafraichir();
+        } });
+        return b;
+      };
+
+      lignes.push(el('h2', { class: 'box-title' }, 'Notifications'));
+      if (etatNotif === 'actives') {
+        lignes.push(el('p', {}, icone('check'), ' Activées sur cet appareil : vous êtes prévenue de chaque nouveau message.'),
+          el('p', { class: 'actions' },
+            action('Envoyer un essai', 'btn--outline', async () => { await api('POST', '/api/sha/notifications/essai'); avis('Essai envoyé : la notification arrive dans un instant.', 'info'); }),
+            action('Désactiver', 'btn--outline', () => application.desactiverNotifications('/api/sha/notifications'))));
+      } else if (etatNotif === 'inactives') {
+        lignes.push(el('p', {}, 'Recevez une notification sur cet appareil à chaque nouveau message d’un client, même quand le site est fermé.'),
+          el('p', { class: 'actions' }, action('Activer les notifications', 'btn--accent', () => application.activerNotifications('/api/sha/notifications'))));
+      } else if (etatNotif === 'refusees') {
+        lignes.push(el('p', {}, 'Les notifications sont bloquées pour ce site : autorisez-les dans les réglages du navigateur (le cadenas à côté de l’adresse), puis revenez ici.'));
+      } else if (document.documentElement.dataset.demo) {
+        lignes.push(el('p', {}, 'Démonstration : sur le vrai site, vous recevez ici une notification à chaque nouveau message d’un client.'));
+      } else if (application.iphone() && !application.installee()) {
+        lignes.push(el('p', {}, 'Sur iPhone, les notifications arrivent dans l’application : installez-la d’abord (ci-dessous), ouvrez-la, puis activez-les ici.'));
+      } else {
+        lignes.push(el('p', {}, 'Ce navigateur ne permet pas les notifications. Essayez avec Chrome, Safari, Edge ou Firefox à jour.'));
+      }
+
+      if (!application.installee()) {
+        lignes.push(el('h2', { class: 'box-title' }, 'Application'));
+        if (application.installable()) {
+          lignes.push(el('p', {}, 'Installez votre espace sur l’écran d’accueil : il s’ouvre comme une application, sans passer par le navigateur.'),
+            el('p', { class: 'actions' }, action('Installer l’application', 'btn--outline', () => application.installer())));
+        } else {
+          lignes.push(el('p', {}, 'Pour l’installer : dans le menu du navigateur, choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».'));
+        }
+      }
+      corpsPanneau.replaceChildren(...lignes);
+    };
+    document.addEventListener('sha:installation', () => { if (!panneau.hidden) panneau.rafraichir(); });
+    return panneau;
   }
 
   async function rafraichirListe() {

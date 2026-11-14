@@ -1,0 +1,24 @@
+{
+  "id": "./",
+  "name": "Sha Tattoo",
+  "short_name": "Sha Tattoo",
+  "description": "Sha Tattoo, tatoueuse à Loison-sous-Lens : flashs, devis et rendez-vous par message.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1efec",
+  "theme_color": "#2c2038",
+  "categories": ["lifestyle", "beauty"],
+  "icons": [
+    { "src": "img/icones/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "img/icones/icone-masque-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Mes messages", "url": "./?messages=1", "icons": [{ "src": "img/icones/icone-192.png", "sizes": "192x192" }] },
+    { "name": "Les flashs", "url": "./flashs", "icons": [{ "src": "img/icones/icone-192.png", "sizes": "192x192" }] }
+  ]
+}

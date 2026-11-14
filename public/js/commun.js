@@ -151,5 +151,106 @@ const Sha = (() => {
     setTimeout(() => n.remove(), 5600);
   }
 
-  return { api, el, icone, bouton, creneau, quand, duree, ETAPES, preparerImage, preparerImageDetail, exporter, visionneuse, avis };
+  /* ---------- L'application : installation et notifications ---------- */
+
+  const demo = Boolean(document.documentElement.dataset.demo);
+  // Le dossier du site (« / », ou « /sha-tattoo/ » pour la démonstration).
+  const racine = new URL((document.querySelector('link[rel="manifest"]') || { href: '/' }).href, location.href).href.replace(/[^/]*$/, '');
+  const installee = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const iphone = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  // Le service worker : il reçoit les notifications (public/sw.js). Pas dans la démonstration.
+  const travailleur = !demo && 'serviceWorker' in navigator
+    ? navigator.serviceWorker.register(racine + 'sw.js', { scope: racine }).catch(() => null)
+    : Promise.resolve(null);
+
+  // La pastille de l'icône (messages non lus) s'efface quand on ouvre l'application.
+  if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+
+  // Chrome et Android proposent l'installation par un événement qu'on garde pour le bouton.
+  let invitation = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    invitation = e;
+    document.dispatchEvent(new Event('sha:installation'));
+  });
+  window.addEventListener('appinstalled', () => {
+    invitation = null;
+    document.dispatchEvent(new Event('sha:installation'));
+  });
+
+  const application = {
+    installee,
+    iphone,
+    /** L'installation peut-elle être proposée sur cet appareil ? */
+    installable: () => !demo && !installee() && (Boolean(invitation) || iphone()),
+    /** Installe (Chrome, Android, Edge) ou explique comment faire (iPhone, iPad). */
+    async installer() {
+      if (invitation) {
+        invitation.prompt();
+        const { outcome } = await invitation.userChoice;
+        invitation = null;
+        document.dispatchEvent(new Event('sha:installation'));
+        return outcome === 'accepted';
+      }
+      avis('Sur iPhone : touchez Partager (le carré avec une flèche), puis « Sur l’écran d’accueil ».', 'info');
+      return false;
+    },
+
+    /** Les notifications sont-elles possibles ici ? (Sur iPhone, seulement une fois l'application installée.) */
+    notificationsPossibles: () => !demo && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window,
+    /** « actives », « refusees » (bloquées dans le navigateur), « inactives » ou « impossibles ». */
+    async etatNotifications() {
+      if (!application.notificationsPossibles()) return 'impossibles';
+      if (Notification.permission === 'denied') return 'refusees';
+      const reg = await travailleur;
+      const abo = reg && (await reg.pushManager.getSubscription().catch(() => null));
+      return abo && Notification.permission === 'granted' ? 'actives' : 'inactives';
+    },
+    /** Demande l'accord, abonne l'appareil et l'enregistre auprès du site (chemin : /api/… ). */
+    async activerNotifications(chemin) {
+      if (!application.notificationsPossibles()) {
+        throw new Error(iphone() && !installee()
+          ? 'Sur iPhone, installez d’abord l’application (Partager, puis « Sur l’écran d’accueil »), puis ouvrez-la.'
+          : 'Ce navigateur ne permet pas les notifications.');
+      }
+      const accord = await Notification.requestPermission();
+      if (accord !== 'granted') throw new Error('Notifications refusées. Vous pouvez les autoriser dans les réglages du navigateur.');
+      const reg = (await travailleur) || (await navigator.serviceWorker.ready);
+      const { cle } = await api('GET', '/api/notifications/cle');
+      const octets = Uint8Array.from(atob(cle.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+      let abo = await reg.pushManager.getSubscription();
+      if (abo) {
+        // Un abonnement fait avec une autre clé (ancien site) est remplacé.
+        const actuelle = abo.options && abo.options.applicationServerKey;
+        if (actuelle && btoa(String.fromCharCode(...new Uint8Array(actuelle))) !== btoa(String.fromCharCode(...octets))) {
+          await abo.unsubscribe();
+          abo = null;
+        }
+      }
+      if (!abo) abo = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: octets });
+      await api('POST', chemin, abo.toJSON());
+      return true;
+    },
+    async desactiverNotifications(chemin) {
+      const reg = await travailleur;
+      const abo = reg && (await reg.pushManager.getSubscription());
+      if (!abo) return;
+      await api('DELETE', chemin, { endpoint: abo.endpoint }).catch(() => {});
+      await abo.unsubscribe();
+    },
+  };
+
+  // Les boutons « Installer l'application » de la page ([data-installer]) : visibles seulement
+  // quand l'installation est possible sur cet appareil.
+  const boutonsInstaller = () => {
+    for (const b of document.querySelectorAll('[data-installer]')) b.hidden = !application.installable();
+  };
+  document.addEventListener('sha:installation', boutonsInstaller);
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-installer]')) application.installer();
+  });
+  boutonsInstaller();
+
+  return { api, el, icone, bouton, creneau, quand, duree, ETAPES, preparerImage, preparerImageDetail, exporter, visionneuse, avis, application };
 })();

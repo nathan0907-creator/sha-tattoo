@@ -4,3 +4,7 @@ data/
 .claude/
 # La démonstration fabriquée pour GitHub Pages (refaite par GitHub à chaque envoi).
 _site/
+
+# Cloudflare : fichiers de travail de wrangler et secrets d'essai en local (jamais publi�s).
+.wrangler/
+.dev.vars

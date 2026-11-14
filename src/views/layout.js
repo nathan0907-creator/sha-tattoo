@@ -195,6 +195,7 @@ function footer(site) {
             ${contact.phone ? html`<li><a class="link" href="${telHref(contact.phone)}">${contact.phone}</a></li>` : ''}
             ${contact.email ? html`<li><a class="link" href="mailto:${contact.email}">${contact.email}</a></li>` : ''}
             <li><a class="link" href="/evenements">Animations tatouage</a></li>
+            <li><button type="button" class="link ours-installer" data-installer hidden>${icon('download')}Installer l'application</button></li>
           </ul>
           ${contact.paypal ? html`<div class="ours-paiement">
             <h2 class="ours-title">Paiement</h2>
@@ -284,6 +285,12 @@ ${noindex || !origin ? '' : html`<link rel="canonical" href="${url}">`}
 ${origin ? html`<meta property="og:url" content="${url}">` : ''}
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="${bodyClass === 'espace' ? '/manifest-salon.webmanifest' : '/manifest.webmanifest'}">
+<link rel="apple-touch-icon" href="/img/icones/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="${bodyClass === 'espace' ? 'Salon Sha' : config.name}">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 ${preload && preload.src ? html`<link rel="preload" as="image" href="${preload.src}" fetchpriority="high">` : ''}
