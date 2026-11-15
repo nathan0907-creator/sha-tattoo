@@ -197,7 +197,7 @@ function carte(site) {
   });
 }
 
-// ── Page 3 — En images ─────────────────────────────────────────────────────
+// ── Page 4 — Flashs & vidéos (les flashs, puis les vidéos TikTok) ─────────────────────────────────────────────────────
 
 function gallery(site) {
   const { config } = site;
@@ -223,8 +223,8 @@ function gallery(site) {
 </main>`;
 
   return layout(site, {
-    title: 'Tatouages en photos',
-    crumb: 'En images',
+    title: 'Flashs et vidéos',
+    crumb: 'Flashs & vidéos',
     description: `Les réalisations de ${config.name}, ${config.trade.toLowerCase()} à ${config.address.city}, en photos et en vidéos.`,
     body,
     styles: ['/css/pages.css'],

@@ -689,10 +689,19 @@ h1, h2, h3 {
   }
 }
 
-/* Écran moyen : les numéros de page s'effacent pour laisser tenir les sept rubriques. */
+/* Écran moyen : les numéros de page s'effacent et les lettres se resserrent un peu, pour que les
+   sept rubriques (dont « Flashs & vidéos ») tiennent sur une ligne, sans défilement de côté. */
 @media (min-width: 62.01rem) and (max-width: 78rem) {
   .site-nav .nav-num {
     display: none;
+  }
+
+  .site-nav ul {
+    gap: clamp(.7rem, 1.3vw, 1.1rem);
+  }
+
+  .site-nav li a {
+    letter-spacing: .1em;
   }
 }
 

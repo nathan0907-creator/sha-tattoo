@@ -35,7 +35,7 @@ const PAGES = [
   { path: '/', number: 1, label: 'La une' },
   { path: '/prestations', number: 2, label: 'La carte' },
   { path: '/flashs', number: 3, label: 'Les flashs' },
-  { path: '/galerie', number: 4, label: 'En images' },
+  { path: '/galerie', number: 4, label: 'Flashs & vidéos' },
   { path: '/evenements', number: 5, label: 'Événements' },
   { path: '/rendez-vous', number: 6, label: 'Prendre rendez-vous' },
   { path: '/nous-trouver', number: 7, label: 'Pratique' },
