@@ -183,7 +183,8 @@ module.exports = {
   // (Réglages → Mentions légales). L'hébergeur est connu : le site est en ligne chez Cloudflare.
   legal: {
     status: '',
-    siret: '',
+    // Donné le 15 novembre 2026 (clé de contrôle vérifiée).
+    siret: '924 357 742 00015',
     publisher: '',
     host: 'Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis (cloudflare.com)',
   },
