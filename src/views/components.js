@@ -80,11 +80,12 @@ function hoursTable(config, now) {
   </table>${hoursNote(config.hoursNote)}`;
 }
 
-/** La note sous les horaires ; « {agenda} » y devient un lien vers l'agenda. */
+/** La note sous les horaires ; les mots « l’agenda » (ou « {agenda} ») y deviennent un lien vers l'agenda. */
 function hoursNote(note) {
   const lignes = [].concat(note || []).filter(Boolean);
   if (!lignes.length) return '';
-  return html`<div class="hours-note">${lignes.map(l => html`<p>${l.split('{agenda}').map((morceau, i) => html`${i ? html`<a class="link" href="/rendez-vous#agenda">l’agenda</a>` : ''}${morceau}`)}</p>`)}</div>`;
+  const lien = html`<a class="link" href="/rendez-vous#agenda">l’agenda</a>`;
+  return html`<div class="hours-note">${lignes.map(l => html`<p>${l.split(/\{agenda\}|l[’']agenda/).map((morceau, i) => html`${i ? lien : ''}${morceau}`)}</p>`)}</div>`;
 }
 
 /** « du mardi au samedi » : premier et dernier jour d'ouverture de la semaine. */
@@ -375,16 +376,16 @@ const eventsSteps = ev => html`<ol class="ev-etapes">
   ${ev.fonctionnement.map((step, i) => html`<li data-reveal data-delay="${i * 90}"><span class="ev-num">${String(i + 1).padStart(2, '0')}</span><p>${step}</p></li>`)}
 </ol>`;
 
-/** Les tarifs, en grand : le montant, puis ce qui le fait varier. */
+const REPERES_ICONES = ['calendar', 'pin', 'clock', 'sparkle'];
+
+/** Les tarifs, en grand : le montant, puis ce qui le fait varier (une ligne par repère). */
 function eventsPrice(ev, { cta = true, titre = true } = {}) {
   return html`<div class="ev-tarifs" data-reveal>
     ${titre ? html`<p class="ev-tarifs-titre">Tarifs</p>` : ''}
     <p class="ev-montant"><small>${ev.prix.avant}</small><b>${ev.prix.montant}</b><small>${ev.prix.apres}</small></p>
-    <ul class="ev-reperes">
-      ${ev.facturation ? html`<li>${icon('calendar')}<span>${ev.facturation}</span></li>` : ''}
-      <li>${icon('pin')}<span>${ev.tarifDetail}</span></li>
-      <li>${icon('clock')}<span>${ev.rythme}.</span></li>
-    </ul>
+    ${ev.reperes.length ? html`<ul class="ev-reperes">
+      ${ev.reperes.map((ligne, i) => html`<li>${icon(REPERES_ICONES[i % REPERES_ICONES.length])}<span>${ligne}</span></li>`)}
+    </ul>` : ''}
     ${cta ? html`<p class="ev-tarifs-cta">${messageButton('Demander un devis', { evenement: true })}</p>` : ''}
   </div>`;
 }

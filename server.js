@@ -66,7 +66,34 @@ const REGLAGES_DEFAUT = {
   paypal: CONFIG.contact.paypal || '',
   wero: '',
   conditionsAcompte: "L'acompte bloque votre créneau et sera déduit du prix final.",
+  // La une : la ligne sous le nom, une annonce libre en tête du bandeau, la description pour Google.
+  style: CONFIG.style || '',
+  annonce: '',
+  description: CONFIG.description || '',
+  // Les règles du salon, dites partout sur le site.
+  surRendezVous: CONFIG.booking.appointmentOnly || '',
+  regleAcompte: CONFIG.booking.rule || '',
+  // La note sous les horaires (une phrase par ligne ; « l’agenda » y devient un lien).
+  noteHoraires: [].concat(CONFIG.hoursNote || []).join('\n'),
+  // Les flashs : la présentation.
+  texteFlashs: CONFIG.flashIntro || '',
+  // Les animations tatouage (événements).
+  evChapeau: (CONFIG.evenements || {}).chapeau || '',
+  evPour: ((CONFIG.evenements || {}).pour || []).join('\n'),
+  evPrixAvant: ((CONFIG.evenements || {}).prix || {}).avant || '',
+  evPrixMontant: ((CONFIG.evenements || {}).prix || {}).montant || '',
+  evPrixApres: ((CONFIG.evenements || {}).prix || {}).apres || '',
+  evReperes: ((CONFIG.evenements || {}).reperes || []).join('\n'),
+  evEtapes: ((CONFIG.evenements || {}).fonctionnement || []).join('\n'),
+  // Les mentions légales.
+  legalStatut: (CONFIG.legal || {}).status || '',
+  siret: (CONFIG.legal || {}).siret || '',
+  responsable: (CONFIG.legal || {}).publisher || '',
+  hebergeur: (CONFIG.legal || {}).host || '',
 };
+
+/** « une ligne\nune autre » → ['une ligne', 'une autre'] (lignes vides retirées). */
+const lignes = (texte) => String(texte || '').split(/\n+/).map((s) => s.trim()).filter(Boolean);
 // Ces réglages ne peuvent pas rester vides : à défaut, la valeur de départ revient.
 const OBLIGATOIRES = ['nom', 'titreUne', 'adresse', 'codePostal', 'ville'];
 
@@ -652,7 +679,7 @@ function contexte(req, chemin) {
       name: r.nom,
       tagline: CONFIG.tagline,
       trade: CONFIG.tagline || 'Salon de tatouage',
-      description: CONFIG.description,
+      description: r.description || CONFIG.description,
       siteUrl: CONFIG.siteUrl || '',
       headline: r.titreUne.split('/').map((s) => s.trim()).filter(Boolean),
       seo: { nearby: [], ...CONFIG.seo },
@@ -664,7 +691,16 @@ function contexte(req, chemin) {
         tiktok: lienTiktok(r.tiktok),
         paypal: nomPaypal(r.paypal) ? 'https://www.paypal.me/' + encodeURIComponent(nomPaypal(r.paypal)) : '',
       },
-      evenements: CONFIG.evenements,
+      // Les animations tatouage, telles que la tatoueuse les a réglées.
+      evenements: (() => {
+        const prix = { avant: r.evPrixAvant, montant: r.evPrixMontant, apres: r.evPrixApres };
+        return {
+          chapeau: r.evChapeau, pour: lignes(r.evPour), prix, reperes: lignes(r.evReperes), fonctionnement: lignes(r.evEtapes),
+          tarif: [prix.avant, prix.montant, prix.apres].filter(Boolean).join(' '),
+        };
+      })(),
+      flashIntro: r.texteFlashs,
+      annonce: r.annonce,
       flashsExemple: CONFIG.flashsExemple || [],
       address: { street: r.adresse, postalCode: r.codePostal, city: r.ville, full },
       maps: {
@@ -672,10 +708,10 @@ function contexte(req, chemin) {
         directions: `https://www.google.com/maps/dir/?api=1&destination=${q}`,
         view: `https://www.google.com/maps/search/?api=1&query=${q}`,
       },
-      booking: { ...CONFIG.booking },
+      booking: { appointmentOnly: r.surRendezVous, rule: r.regleAcompte },
       hours,
-      hoursNote: CONFIG.hoursNote || '',
-      style: CONFIG.style || '',
+      hoursNote: lignes(r.noteHoraires),
+      style: r.style,
       specialties: r.specialites.split(/\n+/).map((s) => s.trim()).filter(Boolean),
       avatar: r.profil,
       depositTerms: r.conditionsAcompte,
@@ -690,7 +726,7 @@ function contexte(req, chemin) {
         const gallery = photos.length ? photos : planches.length ? planches : (CONFIG.photosExemple || []);
         return { hero: photos[0] || planches[0] || CONFIG.photoUne || null, gallery };
       })(),
-      legal: { company: r.nom, status: '', siret: '', publisher: '', host: '', ...CONFIG.legal },
+      legal: { company: r.nom, status: r.legalStatut, siret: r.siret, publisher: r.responsable, host: r.hebergeur },
     },
   };
 }
@@ -1375,6 +1411,9 @@ route('POST', '/api/sha/reglages', async (req, res, corps) => {
   const limites = {
     nom: 60, titreUne: 80, presentation: 1500, adresse: 120, codePostal: 10, ville: 80, telephone: 30, email: 120,
     instagram: 120, facebook: 160, tiktok: 120, specialites: 800, paypal: 120, wero: 40, conditionsAcompte: 600,
+    style: 120, annonce: 140, description: 300, surRendezVous: 80, regleAcompte: 200, noteHoraires: 600,
+    texteFlashs: 600, evChapeau: 400, evPour: 300, evPrixAvant: 60, evPrixMontant: 40, evPrixApres: 60,
+    evReperes: 600, evEtapes: 900, legalStatut: 120, siret: 30, responsable: 120, hebergeur: 200,
   };
   const prochains = { ...reglages() };
   for (const [k, max] of Object.entries(limites)) {

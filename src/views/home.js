@@ -26,11 +26,19 @@ function home(site) {
   const available = flashs.filter(flash => flash.available);
   // La grande image de la une : la dernière réalisation publiée, sinon le dernier flash disponible.
   const hero = photos.hero || available[0] || null;
+  // La bande qui défile : tant qu'elle ne montre que des flashs, elle s'appelle « Les flashs » et
+  // mène à leur page ; avec de vraies photos de tatouages, elle redevient « En images ».
+  const queDesFlashs = gallery.length > 0 && gallery.every(p => p.planche);
+  const bande = queDesFlashs
+    ? { titre: 'Les flashs', page: pageOf('/flashs') }
+    : { titre: 'En images', page: pageOf('/galerie') };
   // À la une : la première vidéo TikTok (la plus likée) ; les suivantes vont plus bas, « En vidéo ».
   const [top, ...otherVideos] = site.videos;
 
   // Fermetures et horaires exceptionnels en tête du bandeau, comme les congés chez Cyrille.
   const tickerItems = [
+    // L'annonce libre de la tatoueuse (Réglages → La une), en premier.
+    config.annonce ? html`<b>${config.annonce}</b>` : '',
     ...annonces.slice(0, 3).map(a => html`<b>${a.texte}</b>`),
     appointmentOnly ? html`<b>${appointmentOnly}</b>` : '',
     'Rendez-vous par message',
@@ -130,7 +138,7 @@ function home(site) {
   ${gallery.length ? html`<section class="hgallery" aria-labelledby="images-titre" data-scrub="pin" data-hgallery>
     <div class="hgallery-sticky">
       <div class="container">
-        ${sectionBar('images-titre', 'En images', pageOf('/galerie'))}
+        ${sectionBar('images-titre', bande.titre, bande.page)}
       </div>
       <div class="hgallery-viewport" data-hgallery-viewport>
         <ul class="hgallery-track" data-hgallery-track>
@@ -140,7 +148,7 @@ function home(site) {
             </figure>
           </li>`)}
           <li class="hgallery-item hgallery-item--end">
-            ${stamp(`Page ${pageOf('/galerie').number} · En images · Page ${pageOf('/galerie').number} · `, { id: 'tampon-images', href: '/galerie', label: `Voir toute la galerie, page ${pageOf('/galerie').number}`, className: 'stamp--cta', attrs: 'data-magnetic' })}
+            ${stamp(`Page ${bande.page.number} · ${bande.titre} · Page ${bande.page.number} · `, { id: 'tampon-images', href: bande.page.path, label: `Voir ${bande.titre.toLowerCase()}, page ${bande.page.number}`, className: 'stamp--cta', attrs: 'data-magnetic' })}
           </li>
         </ul>
       </div>
@@ -197,7 +205,7 @@ function eventsSection(config) {
       <header class="ev-une-tete">
         <p class="kicker" data-reveal>Animations tatouage</p>
         <h2 class="headline headline--l" id="ev-une-titre" data-reveal="lines">${splitTitle(['Le tatouage', "_s'invite à la fête_"])}</h2>
-        <p class="ev-une-chapeau" data-reveal>Une animation tatouage le jour de votre événement : une expérience originale et personnalisée, que vos invités gardent pour toujours.</p>
+        ${ev.chapeau ? html`<p class="ev-une-chapeau" data-reveal>${ev.chapeau}</p>` : ''}
       </header>
       ${eventsFor(ev)}
       <div class="ev-une-grille">

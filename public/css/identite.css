@@ -488,6 +488,27 @@ h1, h2, h3 {
   object-fit: cover;
 }
 
+/* Réglages : trois champs côte à côte (le tarif des événements), et le bouton « Enregistrer »
+   toujours à portée de main au bas de l'écran, le formulaire étant long. */
+.reglages .trois {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+}
+
+@media (max-width: 34rem) {
+  .reglages .trois {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.reglages > .btn[type="submit"] {
+  position: sticky;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 5;
+  box-shadow: 0 .8rem 1.6rem -.6rem rgba(44, 32, 56, .55);
+}
+
 /* Agenda de l'espace salon : le numéro de la personne sous chaque rendez-vous */
 .rdv-tel {
   display: inline-flex;

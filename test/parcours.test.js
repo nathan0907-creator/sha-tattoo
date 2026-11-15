@@ -204,6 +204,15 @@ test('application installable : manifestes, icônes et service worker', async ()
   assert.match(await sw.text(), /addEventListener\('push'/);
 });
 
+test('les scripts envoyés aux navigateurs n’ont pas d’erreur de syntaxe', () => {
+  const { execFileSync } = require('node:child_process');
+  const dossier = path.join(__dirname, '..', 'public');
+  const fichiers = [...fs.readdirSync(path.join(dossier, 'js')).map((f) => path.join(dossier, 'js', f)), path.join(dossier, 'sw.js')].filter((f) => f.endsWith('.js'));
+  assert.ok(fichiers.length >= 8);
+  // « node --check » : la syntaxe seule, sans rien exécuter (scripts comme modules).
+  for (const f of fichiers) assert.doesNotThrow(() => execFileSync(process.execPath, ['--check', f], { stdio: 'pipe' }), path.basename(f));
+});
+
 test('âge et contact', () => {
   assert.strictEqual(ageAu('2000-06-15', new Date(2018, 5, 14)), 17);
   assert.strictEqual(ageAu('2000-06-15', new Date(2018, 5, 15)), 18);
@@ -470,6 +479,9 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   // Les flashs à la place des photos d'exemple (bande « En images » et galerie)
   assert.ok(une.html.includes('src="/img/flashs/flash-01-ia.webp"') && !une.html.includes('realisation-1.svg'));
   assert.ok((await page('/galerie')).html.includes('class="is-planche"'));
+  // La bande qui défile ne montre que des flashs : elle s'appelle « Les flashs » et mène à leur page
+  assert.ok(une.html.includes('id="images-titre">Les flashs</h2>') && !une.html.includes('id="images-titre">En images'));
+  assert.ok(/<a class="section-note" href="\/flashs"/.test(une.html.slice(une.html.indexOf('id="images-titre"'))));
 
   const inconnue = await page('/nimporte-quoi');
   assert.strictEqual(inconnue.status, 404);
@@ -599,6 +611,32 @@ test('l’espace salon : galerie, horaires, photo de profil, refus des faux fich
   const uneSansVideo = (await page('/')).html;
   assert.ok(!uneSansVideo.includes('<video') && !uneSansVideo.includes('data-tiktok='), 'sans vidéo, la une reprend une image');
   assert.ok(!lead(uneSansVideo).includes('une.svg') && /<img[^>]+src="\/(galerie|img\/flashs)\//.test(lead(uneSansVideo)), 'un flash à la une');
+
+  // Tout ce que la tatoueuse peut changer elle-même depuis Réglages
+  const CLES = ['style', 'annonce', 'texteFlashs', 'evChapeau', 'evPour', 'evPrixAvant', 'evPrixMontant', 'evPrixApres', 'evReperes', 'evEtapes', 'noteHoraires', 'surRendezVous', 'regleAcompte', 'legalStatut', 'siret', 'responsable', 'description'];
+  const avant = (await sha('GET', '/api/sha/reglages')).corps;
+  r = await sha('POST', '/api/sha/reglages', {
+    style: 'Spécialiste fineline et dotwork', annonce: 'Flash day samedi !', texteFlashs: 'Mes planches du moment.',
+    evChapeau: 'Un souvenir gravé.', evPour: 'Mariages\nBaptêmes', evPrixAvant: 'Dès', evPrixMontant: '450 €', evPrixApres: 'la demi-journée',
+    evReperes: 'Déplacement compris.', evEtapes: 'On en parle.\nJe dessine.', noteHoraires: 'Regardez l’agenda avant de venir.',
+    surRendezVous: 'Sur rendez-vous seulement', regleAcompte: 'Acompte de 30 %.', legalStatut: 'Micro-entreprise', siret: '123 456 789 00012',
+    responsable: 'Shannon L.', description: 'Tatoueuse fineline près de Lens.',
+  });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.corps));
+  const une2 = (await page('/')).html;
+  for (const t of ['Spécialiste fineline et dotwork', 'Flash day samedi !', 'Un souvenir gravé.', 'Baptêmes', '450 €', 'la demi-journée', 'Déplacement compris.', 'Je dessine.', 'Sur rendez-vous seulement', 'Acompte de 30 %.']) {
+    assert.ok(une2.includes(t), t);
+  }
+  assert.ok(une2.includes('<meta name="description" content="Tatoueuse fineline près de Lens.">'));
+  assert.ok((await page('/flashs')).html.includes('Mes planches du moment.'));
+  assert.ok((await page('/evenements')).html.includes('Dès 450 € la demi-journée'));
+  assert.ok((await page('/nous-trouver')).html.includes('Regardez <a class="link" href="/rendez-vous#agenda">l’agenda</a> avant de venir.'));
+  const ml = lisible((await page('/mentions-legales')).html);
+  assert.ok(ml.includes('Micro-entreprise') && ml.includes('123 456 789 00012') && ml.includes('Shannon L.') && ml.includes('Cloudflare'), 'mentions légales');
+  // … puis tout revient comme avant (les autres tests comptent sur les textes de départ)
+  r = await sha('POST', '/api/sha/reglages', Object.fromEntries(CLES.map((k) => [k, avant[k]])));
+  assert.strictEqual(r.status, 200);
+  assert.ok((await page('/')).html.includes('Spécialiste fineline · floral · ornemental · black &amp; grey'));
 
   // Horaires : écrits librement, enregistrés toujours de la même façon
   r = await sha('POST', '/api/sha/reglages', { h1: '9h-12h / 14h à 18h30', h6: '' });

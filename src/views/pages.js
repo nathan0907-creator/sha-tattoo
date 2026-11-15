@@ -37,7 +37,6 @@ function pageHead(site, { path, kick, title, deck, extra = '' }) {
 /** Rubrique encore vide : rien n'est inventé, on annonce simplement la suite. */
 const comingSoon = text => html`<p class="a-paraitre" data-reveal><strong>À paraître.</strong> ${text}</p>`;
 
-const FLASH_INTRO = "Des projets dessinés de A à Z au salon. Ils ne sont pas faits à la demande, mais peuvent être modifiés et placés sur la zone de votre choix. Chaque pièce n'est réalisée qu'une seule fois.";
 
 /** La visionneuse plein écran (galerie et planches de flashs) : flèches, clavier, balayage. */
 const lightbox = ({ what = 'photo', action = false } = {}) => html`<dialog class="lightbox" data-lightbox aria-label="${what === 'photo' ? 'Photo agrandie' : 'Planche agrandie'}">
@@ -82,7 +81,7 @@ function flashsPage(site) {
     path: '/flashs',
     kick: 'Planches de flashs',
     title: ['Les', '_flashs_'],
-    deck: FLASH_INTRO,
+    deck: config.flashIntro,
   })}
   <div class="container">
     <p class="notice-line" data-reveal>${icon('info')}<span>Touchez une planche pour la voir en grand, puis passez à la suivante.${flashs.length ? ' Un motif vous plaît ? Demandez-le : il ne sera tatoué qu’une fois.' : ''}</span></p>
@@ -115,7 +114,7 @@ function eventsPage(site) {
     path: '/evenements',
     kick: 'Animations tatouage',
     title: ['Le tatouage', "_s'invite à la fête_"],
-    deck: 'Une animation tatouage le jour de votre événement privé : une expérience originale et personnalisée, que vos invités gardent pour toujours.',
+    deck: ev.chapeau,
     extra: html`<p class="actions" data-reveal>${messageButton('Demander un devis', { evenement: true })}</p>`,
   })}
 
@@ -174,7 +173,7 @@ function carte(site) {
     </section>
     <section class="menu-group" id="flashs" aria-labelledby="flashs-titre">
       <h2 class="menu-group-title" id="flashs-titre" data-reveal>Les flashs</h2>
-      <p class="flash-intro" data-reveal>${FLASH_INTRO}</p>
+      ${config.flashIntro ? html`<p class="flash-intro" data-reveal>${config.flashIntro}</p>` : ''}
       <p class="actions" data-reveal>${button(flashs.length ? `Voir les ${flashs.length} planche${flashs.length > 1 ? 's' : ''}` : 'Voir les planches', '/flashs', { variant: 'btn--outline' })}</p>
     </section>
     <section class="menu-group" aria-labelledby="evenements-carte-titre">

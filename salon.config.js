@@ -44,15 +44,18 @@ module.exports = {
 
   // Animations tatouage à l'extérieur (page « Événements »). Uniquement ce que Shannon a dit :
   // rien n'est ajouté ici sans elle.
+  // Ce sont les valeurs de départ : Shannon les change toutes dans son espace (Réglages → Événements).
   evenements: {
+    chapeau: 'Une animation tatouage le jour de votre événement privé : une expérience originale et personnalisée, que vos invités gardent pour toujours.',
     pour: ['Mariages', 'Anniversaires', 'Autres événements privés'],
-    tarif: 'Devis à partir de 400 à 500 € minimum',
-    // Le même tarif, découpé pour l'afficher en grand.
+    // Le tarif, découpé pour l'afficher en grand : « Devis à partir de | 400 à 500 € | minimum ».
     prix: { avant: 'Devis à partir de', montant: '400 à 500 €', apres: 'minimum' },
-    // Premier message de Shannon : « tarification sur devis, à l'heure ».
-    facturation: 'Sur devis, à l’heure.',
-    tarifDetail: 'Tarif variable selon le déplacement et le nombre d’heures.',
-    rythme: 'Maximum de 4 tatouages par heure',
+    // Sous le tarif, une ligne chacun. (Premier message de Shannon : « tarification sur devis, à l'heure ».)
+    reperes: [
+      'Sur devis, à l’heure.',
+      'Tarif variable selon le déplacement et le nombre d’heures.',
+      'Maximum de 4 tatouages par heure.',
+    ],
     fonctionnement: [
       'Possibilité de créer des planches de flash personnalisées pour l’événement.',
       'Les invités ne paient rien individuellement.',
@@ -136,9 +139,9 @@ module.exports = {
     6: [['09:30', '12:30'], ['13:30', '15:00']],
     0: [],
   },
-  // Sous le tableau des horaires, une phrase par ligne. « {agenda} » devient un lien vers l'agenda.
+  // Sous le tableau des horaires, une phrase par ligne. Les mots « l’agenda » deviennent un lien vers l'agenda.
   hoursNote: [
-    'Horaires pouvant varier, car c’est uniquement sur rendez-vous : pensez à regarder {agenda} pour voir quand je suis au salon.',
+    'Horaires pouvant varier, car c’est uniquement sur rendez-vous : pensez à regarder l’agenda pour voir quand je suis au salon.',
     'Mercredi matin : ouvert pendant les vacances scolaires. Samedi : en général jusqu’à 15 h.',
   ],
 
@@ -165,6 +168,9 @@ module.exports = {
   // La ligne sous le nom du salon, sur la une.
   style: 'Spécialiste fineline · floral · ornemental · black & grey',
 
+  // La présentation des flashs (page Les flashs et La carte).
+  flashIntro: 'Des projets dessinés de A à Z au salon. Ils ne sont pas faits à la demande, mais peuvent être modifiés et placés sur la zone de votre choix. Chaque pièce n’est réalisée qu’une seule fois.',
+
   // Texte de présentation de la une, un paragraphe par ligne (modifiable depuis l'espace salon).
   about: {
     paragraphs: [
@@ -173,12 +179,12 @@ module.exports = {
     ],
   },
 
-  // Mentions légales — À COMPLÉTER avant la mise en ligne.
+  // Mentions légales : Shannon complète le statut, le SIRET et le responsable dans son espace
+  // (Réglages → Mentions légales). L'hébergeur est connu : le site est en ligne chez Cloudflare.
   legal: {
-    company: 'Sha Tattoo',
     status: '',
     siret: '',
     publisher: '',
-    host: '',
+    host: 'Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis (cloudflare.com)',
   },
 };
