@@ -359,12 +359,13 @@ function initialiser(nouveauStockage, { code = '' } = {}) {
   // Les planches de Shannon livrées avec le site (salon.config.js, flashsDepart) : ajoutées une seule
   // fois à la galerie. Ce sont ensuite des flashs comme les autres : elle les renomme, les marque
   // « déjà tatoué » ou les retire (leur image reste dans public/img/flashs, rien n'est effacé).
-  // Les planches de départ ont été refaites en plus net (.webp, 15 novembre 2026) : celles déjà
-  // dans la galerie suivent (même planche, nouvelle image et nouvelles dimensions).
+  // Les planches de départ ont été refaites en plus net (15 novembre 2026 : .webp, puis version IA
+  // « -ia.webp ») : celles déjà dans la galerie suivent (même planche, nouvelle image, nouvelles
+  // dimensions), avec tout ce que la tatoueuse y a réglé (titre, prix, « déjà tatoué »).
   for (const g of db.galerie) {
-    const m = /^\/img\/flashs\/(flash-\d\d)\.jpg$/.exec(g.src || '');
-    const neuf = m && (CONFIG.flashsDepart || []).find((f) => f.src === `/img/flashs/${m[1]}.webp`);
-    if (neuf) Object.assign(g, { src: neuf.src, largeur: neuf.largeur, hauteur: neuf.hauteur });
+    const m = /^\/img\/flashs\/(flash-\d\d)[\w-]*\.(?:jpg|webp)$/.exec(g.src || '');
+    const neuf = m && (CONFIG.flashsDepart || []).find((f) => f.src.startsWith(`/img/flashs/${m[1]}`));
+    if (neuf && neuf.src !== g.src) Object.assign(g, { src: neuf.src, largeur: neuf.largeur, hauteur: neuf.hauteur });
   }
 
   if (!db.flashsDepart && Array.isArray(CONFIG.flashsDepart)) {

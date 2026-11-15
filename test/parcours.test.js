@@ -426,8 +426,8 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   const flashs = await page('/flashs');
   assert.strictEqual(flashs.status, 200);
   assert.strictEqual((flashs.html.match(/class="planche /g) || []).length, 20);
-  assert.ok(flashs.html.includes('src="/img/flashs/flash-01.webp"') && flashs.html.includes('data-lightbox'));
-  assert.strictEqual((await fetch(base + '/img/flashs/flash-20.webp')).status, 200);
+  assert.ok(flashs.html.includes('src="/img/flashs/flash-01-ia.webp"') && flashs.html.includes('data-lightbox'));
+  assert.strictEqual((await fetch(base + '/img/flashs/flash-20-ia.webp')).status, 200);
 
   // Les animations tatouage : seulement ce que Shannon a dit
   const ev = lisible((await page('/evenements')).html);
@@ -468,7 +468,7 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   }
 
   // Les flashs à la place des photos d'exemple (bande « En images » et galerie)
-  assert.ok(une.html.includes('src="/img/flashs/flash-01.webp"') && !une.html.includes('realisation-1.svg'));
+  assert.ok(une.html.includes('src="/img/flashs/flash-01-ia.webp"') && !une.html.includes('realisation-1.svg'));
   assert.ok((await page('/galerie')).html.includes('class="is-planche"'));
 
   const inconnue = await page('/nimporte-quoi');
@@ -580,10 +580,10 @@ test('l’espace salon : galerie, horaires, photo de profil, refus des faux fich
   assert.match(lisible((await page('/flashs')).html), /Déjà tatoué/);
 
   // Une planche de départ retirée : son image reste dans le site (public/img/flashs)
-  const premiere = depart.find((x) => x.src === '/img/flashs/flash-01.webp');
+  const premiere = depart.find((x) => x.src === '/img/flashs/flash-01-ia.webp');
   assert.strictEqual((await sha('DELETE', '/api/sha/galerie/' + premiere.id)).status, 200);
-  assert.ok(!(await page('/flashs')).html.includes('flash-01.webp'));
-  assert.strictEqual((await fetch(base + '/img/flashs/flash-01.webp')).status, 200);
+  assert.ok(!(await page('/flashs')).html.includes('flash-01-ia.webp'));
+  assert.strictEqual((await fetch(base + '/img/flashs/flash-01-ia.webp')).status, 200);
 
   // Vidéos TikTok : des liens reconnus, dans l'ordre choisi ; un lien étranger est refusé
   r = await sha('GET', '/api/sha/reglages');
