@@ -241,6 +241,23 @@ const Sha = (() => {
     },
   };
 
+  // L'agenda ([data-agenda]) : toucher un jour l'affiche en détail sous le calendrier ; s'il est
+  // libre, le bouton « Demander ce jour » ouvre la messagerie avec ce jour.
+  document.addEventListener('click', (e) => {
+    const jour = e.target.closest('[data-agenda-jour]');
+    if (!jour) return;
+    const agenda = jour.closest('[data-agenda]');
+    for (const autre of agenda.querySelectorAll('[data-agenda-jour][aria-pressed="true"]')) autre.setAttribute('aria-pressed', 'false');
+    jour.setAttribute('aria-pressed', 'true');
+    const nom = jour.dataset.jour;
+    agenda.querySelector('[data-agenda-titre]').textContent = nom.charAt(0).toUpperCase() + nom.slice(1);
+    agenda.querySelector('[data-agenda-texte]').textContent = jour.dataset.resume;
+    const demande = agenda.querySelector('[data-agenda-demande]');
+    demande.dataset.date = jour.dataset.date;
+    demande.dataset.jour = nom;
+    demande.hidden = jour.dataset.etat !== 'libre';
+  });
+
   // Les boutons « Installer l'application » de la page ([data-installer]) : visibles seulement
   // quand l'installation est possible sur cet appareil.
   const boutonsInstaller = () => {

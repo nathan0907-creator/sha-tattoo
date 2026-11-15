@@ -147,26 +147,70 @@ function etatOuverture(semaine, now) {
  * rendez-vous déjà fixés ou proposés. À partir du lendemain ; seules les plages d'au moins
  * 30 minutes comptent. Les grosses pièces, elles, ont leur créneau fixé avec le devis.
  */
+/** Les rendez-vous fixés ou proposés, jour par jour : ce qui n'est plus libre. */
+const creneauxOccupes = () => db.projets.filter((p) => p.creneau && p.etape !== 'annule').map((p) => ({
+  date: p.creneau.debut.slice(0, 10),
+  start: toMinutes(p.creneau.debut.slice(11)),
+  end: toMinutes(p.creneau.debut.slice(11)) + p.creneau.duree,
+}));
+
+/** Les plages encore libres d'un jour (au moins « minimum » minutes chacune). */
+function libresDu(date, horaires, occupes, minimum = 30) {
+  let libres = horaires.plages.map((p) => ({ ...p }));
+  for (const o of occupes.filter((x) => x.date === date)) {
+    libres = libres.flatMap((l) => {
+      if (o.end <= l.start || o.start >= l.end) return [l];
+      return [{ start: l.start, end: o.start }, { start: o.end, end: l.end }].filter((x) => x.end > x.start);
+    });
+  }
+  return libres.filter((l) => l.end - l.start >= minimum);
+}
+
 function disponibilites(semaine, now, { jours = 5, horizon = 45, minimum = 30 } = {}) {
-  const occupes = db.projets.filter((p) => p.creneau && p.etape !== 'annule').map((p) => ({
-    date: p.creneau.debut.slice(0, 10),
-    start: toMinutes(p.creneau.debut.slice(11)),
-    end: toMinutes(p.creneau.debut.slice(11)) + p.creneau.duree,
-  }));
+  const occupes = creneauxOccupes();
   const liste = [];
   for (let offset = 1; offset <= horizon && liste.length < jours; offset++) {
     const date = addDays(now.date, offset);
-    let libres = horairesDu(date, semaine).plages.map((p) => ({ ...p }));
-    for (const o of occupes.filter((x) => x.date === date)) {
-      libres = libres.flatMap((l) => {
-        if (o.end <= l.start || o.start >= l.end) return [l];
-        return [{ start: l.start, end: o.start }, { start: o.end, end: l.end }].filter((x) => x.end > x.start);
-      });
-    }
-    libres = libres.filter((l) => l.end - l.start >= minimum);
+    const libres = libresDu(date, horairesDu(date, semaine), occupes, minimum);
     if (libres.length) liste.push({ date, jour: jourLong(date), plages: libres, texte: plagesTexte(libres) });
   }
   return liste;
+}
+
+/**
+ * L'agenda public : les semaines qui viennent, jour par jour, du lundi de la semaine en cours.
+ * Pour chaque jour : fermé (et pourquoi), complet, ou les plages encore libres. Aucun nom de
+ * client : seulement libre ou pris. Les jours passés sont grisés ; aujourd'hui se demande
+ * par téléphone ou message, comme les autres (le créneau est confirmé par la tatoueuse).
+ */
+function agenda(semaine, now, { semaines = 6, minimum = 30 } = {}) {
+  const occupes = creneauxOccupes();
+  const lundi = addDays(now.date, -((weekday(now.date) + 6) % 7));
+  const jours = [];
+  for (let i = 0; i < semaines * 7; i++) {
+    const date = addDays(lundi, i);
+    const h = horairesDu(date, semaine);
+    const base = { date, jour: jourLong(date), numero: Number(date.slice(8)), mois: date.slice(5, 7) };
+    if (date < now.date) {
+      jours.push({ ...base, etat: 'passe' });
+    } else if (!h.plages.length) {
+      // Fermé : jour habituel de fermeture, fermeture exceptionnelle ou jour férié.
+      jours.push({ ...base, etat: 'ferme', motif: h.ferie ? `${h.ferie.name} (férié)` : h.exception ? (h.motif || 'fermeture') : '' });
+    } else {
+      const libres = date === now.date
+        ? libresDu(date, h, occupes, minimum).map((l) => ({ start: Math.max(l.start, now.minutes), end: l.end })).filter((l) => l.end - l.start >= minimum)
+        : libresDu(date, h, occupes, minimum);
+      jours.push({
+        ...base,
+        etat: libres.length ? 'libre' : 'complet',
+        horaires: plagesTexte(h.plages),
+        libres: plagesTexte(libres),
+        modifie: Boolean(h.exception),
+        motif: h.exception ? h.motif : '',
+      });
+    }
+  }
+  return jours;
 }
 
 const frHeure = (min) => `${Math.floor(min / 60)}h${min % 60 ? String(min % 60).padStart(2, '0') : ''}`;
@@ -583,6 +627,7 @@ function contexte(req, chemin) {
     status: etatOuverture(hours, now),
     annonces: annoncesCalendrier(hours, now.date),
     disponibilites: disponibilites(hours, now),
+    agenda: agenda(hours, now),
     flashs: images.filter((g) => g.type === 'flash').map(decrireImage),
     videos: videosActuelles().map((v) => ({ id: v.id, auteur: v.auteur, titre: v.titre || '', vignette: v.vignette || '', fichier: v.fichier || '' })),
     client: client && {

@@ -6,7 +6,7 @@ const { layout } = require('./layout');
 const {
   PAGES, picture, button, messageButton, splitTitle, kicker, sectionBar, stamp, ticker, edition, capitalize,
   ratioClass, houseRules, appointmentSentence, euros, openBadge, hoursTable, openDaysSentence, specialtiesTable,
-  calendarNotices, availabilityBox, videoSection, videoPlayer, eventsFor, eventsSteps, eventsPrice,
+  calendarNotices, availabilityBox, videoSection, videoPlayer, eventsFor, eventsSteps, eventsPrice, agendaCalendar,
 } = require('./components');
 
 const { addDays: addDaysISO } = require('../time');
@@ -153,7 +153,7 @@ function home(site) {
     ${sectionBar('annonces-titre', 'Prendre rendez-vous', pageOf('/rendez-vous'))}
     <div class="annonces">
       ${appointmentFlyer(config)}
-      ${availabilityBox(site.disponibilites, { id: 'dispos-une' })}
+      ${agendaCalendar(site.agenda, { id: 'agenda-une' })}
     </div>
   </section>
 
@@ -195,7 +195,7 @@ function eventsSection(config) {
   return html`<section class="ev-bande ev-bande--une" id="evenements" aria-labelledby="ev-une-titre">
     <div class="container ev-une">
       <header class="ev-une-tete">
-        <p class="kicker" data-reveal>Animations tatouage · événements privés</p>
+        <p class="kicker" data-reveal>Animations tatouage</p>
         <h2 class="headline headline--l" id="ev-une-titre" data-reveal="lines">${splitTitle(['Le tatouage', "_s'invite à la fête_"])}</h2>
         <p class="ev-une-chapeau" data-reveal>Une animation tatouage le jour de votre événement : une expérience originale et personnalisée, que vos invités gardent pour toujours.</p>
       </header>

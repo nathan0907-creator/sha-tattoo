@@ -133,12 +133,65 @@ function availabilityBox(disponibilites, { id = 'dispos-titre' } = {}) {
     <p class="dispos-pour">Pour une retouche ou un petit tatouage.</p>
     ${disponibilites.length
       ? html`<ul class="dispos-liste">${disponibilites.map(d => html`<li>
-          <button type="button" class="dispos-jour" data-ouvrir-chat data-date="${d.date}">
+          <button type="button" class="dispos-jour" data-ouvrir-chat data-date="${d.date}" data-jour="${d.jour}">
             <span class="dispos-date">${capitalize(d.jour)}</span>
             <span class="dispos-heures">${d.texte}</span>
           </button>
         </li>`)}</ul>`
       : html`<p class="field-hint">Pas de disponibilité dans les prochaines semaines : écrivez quand même, une place peut se libérer.</p>`}
+    <p class="field-hint">Pour un projet plus grand, le créneau est fixé avec le devis. Un acompte est demandé pour chaque rendez-vous.</p>
+  </section>`;
+}
+
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const MOIS_COURT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const ETAT_JOUR = { libre: 'Libre', complet: 'Complet', ferme: 'Fermé', passe: '' };
+
+/**
+ * L'agenda : un calendrier des semaines à venir. Chaque jour dit s'il est libre (et à quelles
+ * heures), complet ou fermé (congés, jour férié). Toucher un jour l'affiche en détail sous le
+ * calendrier, avec de quoi le demander par message (public/js/agenda.js).
+ */
+function agendaCalendar(jours, { id = 'agenda-titre', titre = 'L’agenda' } = {}) {
+  if (!jours || !jours.length) return '';
+  const premierUtile = jours.find(j => j.etat === 'libre') || jours.find(j => j.etat !== 'passe');
+  const mois = [...new Set(jours.filter(j => j.etat !== 'passe').map(j => j.date.slice(0, 7)))];
+  const titreMois = mois.map(m => MOIS[Number(m.slice(5)) - 1]).join(' – ');
+  const resume = j => (j.etat === 'libre' ? `Libre : ${j.libres}`
+    : j.etat === 'complet' ? `Complet (ouvert ${j.horaires})`
+      : j.etat === 'ferme' ? `Fermé${j.motif ? ` : ${j.motif}` : ''}` : 'Passé');
+  return html`<section class="agenda" id="agenda" aria-labelledby="${id}" data-agenda data-reveal>
+    <header class="agenda-tete">
+      <h2 class="box-title" id="${id}">${titre}</h2>
+      <p class="agenda-mois">${capitalize(titreMois)}</p>
+    </header>
+    <p class="agenda-intro">Les créneaux encore libres des prochaines semaines. Touchez un jour pour le voir en détail et le demander par message.</p>
+    <div class="agenda-grille">
+      <div class="agenda-semaine agenda-noms" aria-hidden="true">
+        ${['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(n => html`<span>${n}</span>`)}
+      </div>
+      ${Array.from({ length: Math.ceil(jours.length / 7) }, (_, s) => jours.slice(s * 7, s * 7 + 7)).map(semaine => html`<div class="agenda-semaine">
+        ${semaine.map(j => {
+          const nouveauMois = j.numero === 1;
+          const classes = `agenda-jour is-${j.etat}${j.modifie ? ' is-modifie' : ''}${nouveauMois ? ' is-nouveau-mois' : ''}`;
+          const contenu = html`<span class="agenda-num">${j.numero}${nouveauMois ? html`<small>${MOIS_COURT[Number(j.mois) - 1]}</small>` : ''}</span><span class="agenda-etat">${ETAT_JOUR[j.etat]}</span>`;
+          return j.etat === 'passe'
+            ? html`<span class="${classes}" aria-label="${capitalize(j.jour)} : passé">${contenu}</span>`
+            : html`<button type="button" class="${classes}" data-agenda-jour data-date="${j.date}" data-jour="${j.jour}" data-etat="${j.etat}" data-resume="${resume(j)}" aria-pressed="${premierUtile && j.date === premierUtile.date ? 'true' : 'false'}" aria-label="${capitalize(j.jour)} : ${resume(j)}">${contenu}</button>`;
+        })}
+      </div>`)}
+    </div>
+    <ul class="agenda-legende" aria-label="Légende">
+      <li><span class="agenda-pastille is-libre"></span>Libre</li>
+      <li><span class="agenda-pastille is-complet"></span>Complet</li>
+      <li><span class="agenda-pastille is-ferme"></span>Fermé</li>
+      <li><span class="agenda-pastille is-modifie"></span>Horaires modifiés</li>
+    </ul>
+    <div class="agenda-detail" data-agenda-detail aria-live="polite">
+      ${premierUtile ? html`<p class="agenda-detail-jour" data-agenda-titre>${capitalize(premierUtile.jour)}</p>
+      <p class="agenda-detail-texte" data-agenda-texte>${resume(premierUtile)}</p>
+      <p class="actions"><button type="button" class="btn btn--accent btn--small" data-ouvrir-chat data-agenda-demande data-date="${premierUtile.date}" data-jour="${premierUtile.jour}" ${premierUtile.etat === 'libre' ? '' : raw('hidden')}>${buttonLabel('Demander ce jour')}${icon('arrow-right')}</button></p>` : ''}
+    </div>
     <p class="field-hint">Pour un projet plus grand, le créneau est fixé avec le devis. Un acompte est demandé pour chaque rendez-vous.</p>
   </section>`;
 }
@@ -316,9 +369,9 @@ const eventsSteps = ev => html`<ol class="ev-etapes">
 </ol>`;
 
 /** Les tarifs, en grand : le montant, puis ce qui le fait varier. */
-function eventsPrice(ev, { cta = true } = {}) {
+function eventsPrice(ev, { cta = true, titre = true } = {}) {
   return html`<div class="ev-tarifs" data-reveal>
-    <p class="ev-tarifs-titre">Tarifs</p>
+    ${titre ? html`<p class="ev-tarifs-titre">Tarifs</p>` : ''}
     <p class="ev-montant"><small>${ev.prix.avant}</small><b>${ev.prix.montant}</b><small>${ev.prix.apres}</small></p>
     <ul class="ev-reperes">
       ${ev.facturation ? html`<li>${icon('calendar')}<span>${ev.facturation}</span></li>` : ''}
@@ -364,4 +417,5 @@ module.exports = {
   openStatusLabel, openBadge, specialtiesTable, availabilityBox, calendarNotices, houseRules, appointmentSentence,
   kicker, sectionBar, stamp, ticker, buttonLabel, button, messageButton, splitTitle,
   socialLinks, paypalButton, videoGrid, videoSection, videoPlayer, handle, eventsFor, eventsSteps, eventsPrice,
+  agendaCalendar,
 };

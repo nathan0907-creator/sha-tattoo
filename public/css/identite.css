@@ -218,10 +218,307 @@ h1, h2, h3 {
   border-bottom-color: var(--line);
 }
 
+.pager {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .pager-link {
-  font-size: clamp(1.8rem, 4vw, 3rem);
+  min-width: 0;
+  font-size: clamp(1.35rem, 5.4vw, 3rem);
   font-weight: 500;
   letter-spacing: .01em;
+}
+
+.pager-link > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.pager-link small {
+  font-size: .72rem;
+  letter-spacing: .14em;
+}
+
+/* Téléphone : « tournez la page » sur toute la largeur, une page par ligne. */
+@media (max-width: 40rem) {
+  .pager {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pager > span:empty {
+    display: none;
+  }
+
+  .pager-link {
+    min-height: 4.5rem;
+  }
+
+  .pager-link--prev {
+    border-right: 0;
+  }
+
+  .pager-link + .pager-link {
+    border-top: 1px solid var(--line);
+  }
+}
+
+.pager-link--prev {
+  border-right-color: var(--line);
+}
+
+/* « Une question ? » et la règle du salon : même trait fin que les autres encadrés. */
+.help-band {
+  margin-top: 1rem;
+}
+
+.help-band p {
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold-bright);
+  border-radius: 2px;
+  background: var(--white);
+  font-size: 1.02rem;
+}
+
+.help-band strong,
+.rules strong,
+.a-paraitre strong {
+  font-size: .82em;
+  font-weight: 600;
+  letter-spacing: .14em;
+}
+
+.rules {
+  border-left-width: 3px;
+  border-radius: 2px;
+}
+
+.a-paraitre {
+  border-color: var(--line-strong);
+  border-radius: 2px;
+}
+
+/* La carte : un seul filet fin au-dessus de la liste (plus de double trait violet). (À ne pas
+   confondre avec l'encadré du devis de la messagerie, « .carte.carte-devis ».) */
+.carte-devis:not(.carte) {
+  border-top: 0;
+}
+
+/* ── Messagerie : encadrés, avancement, pastille « Mes messages » ────────── */
+
+.carte {
+  border-color: var(--line-strong);
+  border-radius: 2px;
+  box-shadow: 0 .8rem 1.4rem -1rem rgba(44, 32, 56, .45);
+}
+
+.carte.carte-devis,
+.carte-creneau {
+  border-top: 3px solid var(--gold-bright);
+}
+
+.devis-lignes,
+.devis-lignes div + div {
+  border-color: var(--line-strong);
+}
+
+.devis-lignes dt {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .14em;
+}
+
+.devis-lignes dd {
+  font-weight: 500;
+}
+
+/* Les bulles de messages : arrondies, avec un coin pointu du côté de qui parle. */
+.msg p {
+  border-radius: 1rem;
+  font-size: 1rem;
+}
+
+.msg-moi p {
+  border-bottom-right-radius: .3rem;
+}
+
+.msg-elle p {
+  border-color: var(--line-strong);
+  border-bottom-left-radius: .3rem;
+}
+
+.msg-image {
+  overflow: hidden;
+  border-radius: .8rem;
+}
+
+.badge {
+  border-color: var(--line-strong);
+  border-radius: var(--radius);
+  font-size: .66rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+}
+
+.projet-ligne {
+  border-bottom-color: var(--line);
+}
+
+.progression li {
+  overflow: hidden;
+  border-top-width: 3px;
+  font-size: .68rem;
+  letter-spacing: .06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-bulle {
+  border-radius: var(--radius);
+  box-shadow: 0 .8rem 1.4rem -.7rem rgba(44, 32, 56, .55);
+  font-size: .82rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+
+@media (hover: hover) {
+  .chat-bulle:hover {
+    box-shadow: 0 1rem 1.6rem -.7rem rgba(44, 32, 56, .6);
+  }
+}
+
+/* ── Espace salon : onglets et filtres ──────────────────────────────────── */
+
+.onglets-espace button {
+  padding: 0 .75rem;
+  border-radius: var(--radius);
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+
+/* Téléphone : les cinq onglets tiennent dans la largeur, sans défiler. */
+@media (max-width: 52rem) {
+  .onglets-espace {
+    justify-content: space-between;
+    gap: .1rem;
+  }
+
+  .onglets-espace button {
+    min-width: 2.75rem;
+    justify-content: center;
+    padding: 0 .55rem;
+  }
+}
+
+.filtres {
+  overflow: hidden;
+  border-color: var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.filtres button {
+  font-size: .76rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+
+.filtres button + button {
+  border-left-color: var(--line-strong);
+}
+
+/* Titres des pages de l'espace, rubriques des réglages : au trait fin, comme le site. */
+.page-titre {
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--line-strong);
+  font-weight: 500;
+  line-height: .95;
+}
+
+.reglages fieldset {
+  border-color: var(--line);
+  border-radius: 2px;
+}
+
+.reglages legend {
+  padding: .2rem .6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--gold);
+  font-size: .76rem;
+  font-weight: 600;
+  letter-spacing: .16em;
+}
+
+/* La photo de profil des réglages : toujours ronde (elle s'écrasait en ovale sur téléphone). */
+.profil {
+  flex-wrap: wrap;
+}
+
+.profil-apercu {
+  flex: none;
+}
+
+.profil-actions {
+  flex: 1 1 11rem;
+  min-width: 0;
+}
+
+.profil-actions .btn {
+  max-width: 100%;
+}
+
+@media (max-width: 30rem) {
+  .profil {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profil-actions {
+    flex: none;
+    width: 100%;
+  }
+}
+
+.profil-apercu .brand-avatar {
+  flex: none;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+/* Pages légales : onglets et intertitres au trait fin */
+.legal-nav a {
+  min-height: 2.6rem;
+  border-color: var(--line-strong);
+  border-radius: var(--radius);
+  font-size: .76rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+
+.prose h2 {
+  padding-top: .7rem;
+  border-top: 1px solid var(--line-strong);
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+
+.prose h3 {
+  font-size: .82rem;
+  font-weight: 600;
+  letter-spacing: .14em;
+}
+
+/* Bandeau de rubrique : sur deux lignes (téléphone), le renvoi « suite page… » se range à droite. */
+.section-note {
+  margin-left: auto;
+}
+
+/* Pied de page : le filet du titre « Paiement » sur toute la colonne, comme les autres. */
+.ours-paiement .ours-title {
+  justify-self: stretch;
 }
 
 /* ── Encadrés ───────────────────────────────────────────────────────────── */
@@ -261,6 +558,11 @@ h1, h2, h3 {
   letter-spacing: .14em;
 }
 
+/* « · édition du jour » : la date se coupait sur quatre lignes dans le petit encadré. */
+.masthead-ear-more {
+  display: none;
+}
+
 .masthead-ear-slot,
 .masthead-ear--slot [data-next-slot-label] {
   font-family: var(--font-head);
@@ -296,6 +598,18 @@ h1, h2, h3 {
   min-height: 2.75rem;
   padding-inline: 1.15rem;
   font-size: .76rem;
+}
+
+/* Le double du libellé (effet de survol) attend bien plus bas : avec les boutons arrondis et des
+   lettres plus petites, il se voyait en transparence sous le texte. */
+.btn > span[data-text]::after {
+  padding-top: 3em;
+}
+
+@media (hover: hover) {
+  .btn:not(:disabled):hover > span[data-text] {
+    transform: translateY(calc(-100% - 3em));
+  }
 }
 
 .icon-btn {
@@ -364,6 +678,46 @@ h1, h2, h3 {
   text-decoration-thickness: .22em;
   text-decoration-skip-ink: none;
   text-underline-offset: -.02em;
+}
+
+/* Chiffres toujours alignés : sans cela, la police des titres prend ses chiffres « à l'ancienne »
+   (le 3 et le 9 descendent sous la ligne) dès qu'un style demande des chiffres de même largeur. */
+body *,
+.dispos-heures,
+.hours td {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Les heures des disponibilités : dans la police du texte, comme le tableau des horaires. */
+.dispos-heures {
+  font-family: var(--font-label);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Horaires : une plage ne se coupe jamais au milieu. */
+.hours td {
+  white-space: nowrap;
+}
+
+.hours th {
+  padding-right: .6rem;
+}
+
+@media (max-width: 24rem) {
+  .hours {
+    font-size: .92rem;
+  }
+}
+
+/* Les noms de ville à trait d'union (Loison-sous-Lens) ne se coupent pas. */
+.map-address,
+address {
+  hyphens: manual;
+}
+
+.map-address {
+  text-wrap: balance;
 }
 
 /* La note sous les horaires (mercredi matin, samedi après-midi) */
@@ -1018,6 +1372,47 @@ h1, h2, h3 {
   background: #fff;
 }
 
+/* Téléphone : deux planches par ligne (moins de défilement, images moins agrandies donc plus nettes). */
+@media (max-width: 40rem) {
+  .planches {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.6rem .9rem;
+    padding-right: .35rem;
+  }
+
+  .planche {
+    gap: .6rem;
+  }
+
+  .planche-image {
+    box-shadow: .35rem .35rem 0 -1px var(--page-bg, var(--paper)), .35rem .35rem 0 0 var(--gold-bright);
+  }
+
+  .planche-pied {
+    display: grid;
+    gap: .5rem;
+  }
+
+  .planche-nom {
+    font-size: 1.05rem;
+  }
+
+  .planche-pied .btn {
+    width: 100%;
+    padding-inline: .6rem;
+  }
+
+  .flash-taken {
+    font-size: 1rem;
+  }
+
+  /* La galerie aussi : deux colonnes. */
+  .masonry {
+    columns: 2;
+    column-gap: .8rem;
+  }
+}
+
 .lightbox-action {
   display: flex;
   justify-content: center;
@@ -1028,7 +1423,8 @@ h1, h2, h3 {
 
 .ev-pour {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  /* Toujours trois de front : jamais une carte seule sur sa ligne. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
   margin: 0;
   padding: 0;
@@ -1067,6 +1463,36 @@ h1, h2, h3 {
   font-size: 1.7rem;
   font-weight: 500;
   line-height: 1.1;
+}
+
+/* Téléphone : les trois types d'événements côte à côte, en petit. */
+@media (max-width: 40rem) {
+  .ev-pour {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .5rem;
+  }
+
+  .ev-carte {
+    gap: .55rem;
+    padding: 1rem .35rem .9rem;
+  }
+
+  .ev-icone {
+    width: 2.8rem;
+    height: 2.8rem;
+  }
+
+  .ev-icone .icon {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .ev-nom {
+    font-size: 1.05rem;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
 }
 
 /* La bande sombre : « comment ça se passe » sur la page, et le renvoi depuis la une. */
@@ -1189,6 +1615,11 @@ h1, h2, h3 {
 .ev-tarif {
   display: grid;
   gap: 1.6rem;
+  margin-top: 1.4rem;
+}
+
+.page-evenements .ev-pour {
+  margin-top: 1.4rem;
 }
 
 @media (min-width: 56rem) {
@@ -1411,7 +1842,7 @@ img.is-planche {
   gap: .5rem;
 }
 
-.field .choix {
+.field .choix-ev {
   position: relative;
   font-family: var(--font-text);
   font-size: 1rem;
@@ -1421,7 +1852,7 @@ img.is-planche {
   cursor: pointer;
 }
 
-.field .choix input {
+.field .choix-ev input {
   position: absolute;
   top: 0;
   left: 0;
@@ -1434,7 +1865,7 @@ img.is-planche {
   opacity: 0;
 }
 
-.choix span {
+.choix-ev span {
   display: inline-flex;
   align-items: center;
   min-height: 2.6rem;
@@ -1445,13 +1876,13 @@ img.is-planche {
   transition: background-color .2s ease, color .2s ease, border-color .2s ease;
 }
 
-.choix input:checked + span {
+.choix-ev input:checked + span {
   border-color: var(--ink);
   background: var(--ink);
   color: var(--paper);
 }
 
-.choix input:focus-visible + span {
+.choix-ev input:focus-visible + span {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
@@ -1460,6 +1891,269 @@ img.is-planche {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: 0 .8rem;
+}
+
+/* ── L'agenda : les semaines à venir, jour par jour ─────────────────────── */
+
+.agenda {
+  display: grid;
+  align-content: start;
+  gap: .9rem;
+  min-width: 0;
+  padding: 1.15rem 1.2rem 1.3rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--white);
+  color: var(--ink);
+}
+
+.agenda-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .2rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.agenda-tete .box-title {
+  border: 0;
+}
+
+.agenda-mois {
+  margin: 0;
+  color: var(--gold);
+  font-family: var(--font-head);
+  font-size: 1.2rem;
+  font-style: italic;
+}
+
+.agenda-intro {
+  margin: 0;
+  color: var(--muted);
+  font-size: .92rem;
+  line-height: 1.4;
+}
+
+.agenda-grille {
+  display: grid;
+  gap: .3rem;
+}
+
+.agenda-semaine {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: .3rem;
+}
+
+.agenda-noms span {
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.agenda-jour {
+  position: relative;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: .1rem;
+  min-width: 0;
+  min-height: 3.1rem;
+  padding: .3rem .1rem;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: 1.05;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.agenda-num {
+  display: grid;
+  justify-items: center;
+  font-family: var(--font-head);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.agenda-num small {
+  color: var(--gold);
+  font-family: var(--font-label);
+  font-size: .55rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.agenda-etat {
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* Libre : violet, on peut le demander */
+.agenda-jour.is-libre {
+  border-color: rgba(123, 47, 134, .35);
+  background: var(--violet-soft);
+}
+
+.agenda-jour.is-libre .agenda-etat {
+  color: var(--gold);
+}
+
+/* Complet : ouvert, mais plus de place */
+.agenda-jour.is-complet {
+  background: var(--paper-2);
+  color: var(--muted);
+}
+
+/* Fermé (jour habituel, congés, jour férié) : barré d'un trait fin */
+.agenda-jour.is-ferme {
+  color: rgba(44, 32, 56, .45);
+  background:
+    linear-gradient(to top right, transparent calc(50% - .5px), rgba(44, 32, 56, .18) 50%, transparent calc(50% + .5px));
+}
+
+.agenda-jour.is-passe {
+  color: rgba(44, 32, 56, .25);
+  cursor: default;
+}
+
+/* Horaires modifiés ce jour-là : un point en coin */
+.agenda-jour.is-modifie::after,
+.agenda-pastille.is-modifie::after {
+  content: "";
+  position: absolute;
+  top: .3rem;
+  right: .3rem;
+  width: .4rem;
+  height: .4rem;
+  border-radius: 50%;
+  background: var(--gold-display);
+}
+
+.agenda-jour[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.agenda-jour[aria-pressed="true"] .agenda-etat,
+.agenda-jour[aria-pressed="true"] .agenda-num small {
+  color: var(--gold-bright);
+}
+
+@media (hover: hover) {
+  button.agenda-jour:not([aria-pressed="true"]):hover {
+    border-color: var(--ink);
+  }
+}
+
+.agenda-jour:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.agenda-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem 1rem;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: .8rem;
+  list-style: none;
+}
+
+.agenda-legende li {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.agenda-pastille {
+  position: relative;
+  width: .9rem;
+  height: .9rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+}
+
+.agenda-pastille.is-libre { border-color: rgba(123, 47, 134, .35); background: var(--violet-soft); }
+.agenda-pastille.is-complet { background: var(--paper-2); }
+.agenda-pastille.is-ferme { background: linear-gradient(to top right, transparent calc(50% - .5px), rgba(44, 32, 56, .4) 50%, transparent calc(50% + .5px)); }
+.agenda-pastille.is-modifie { border: 0; }
+.agenda-pastille.is-modifie::after { top: .25rem; right: .25rem; }
+
+.agenda-detail {
+  display: grid;
+  gap: .35rem;
+  padding: .9rem 1rem;
+  border-left: 3px solid var(--gold-bright);
+  background: var(--paper);
+}
+
+.agenda-detail p {
+  margin: 0;
+}
+
+.agenda-detail-jour {
+  font-family: var(--font-head);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.agenda-detail-texte {
+  font-size: .98rem;
+}
+
+.agenda-detail .actions {
+  margin-top: .35rem;
+}
+
+.agenda .field-hint {
+  margin: 0;
+}
+
+/* Page Rendez-vous, grand écran : à gauche l'affichette puis les prochaines disponibilités, à
+   droite l'agenda ; dessous, le salon et l'acompte côte à côte. */
+@media (min-width: 60rem) {
+  .rdv-page {
+    grid-template-columns: minmax(0, 27rem) minmax(0, 32rem);
+  }
+
+  .rdv-page .flyer { grid-column: 1; grid-row: 1; }
+  .rdv-page .agenda { grid-column: 2; grid-row: 1 / span 2; }
+  .rdv-page .dispos { grid-column: 1; grid-row: 2; justify-self: stretch; }
+
+  .rdv-page .how-box {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: stretch;
+    max-width: none;
+  }
+
+  .rdv-page .acompte-box { grid-column: 2; grid-row: 3; }
+}
+
+/* Très petit écran : seulement le chiffre et une pastille de couleur. */
+@media (max-width: 24rem) {
+  .agenda {
+    padding-inline: .8rem;
+  }
+
+  .agenda-etat {
+    display: none;
+  }
 }
 
 /* ── L'application : installation et notifications ──────────────────────── */

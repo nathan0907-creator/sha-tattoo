@@ -497,11 +497,23 @@ test('fermetures, ouvertures et horaires exceptionnels ; jours fériés fermés 
 
 test('prochaines disponibilités : les plages libres, moins les rendez-vous fixés', async () => {
   const sha = await salon();
-  const jours = (html) => [...html.matchAll(/data-date="([\d-]+)">\s*<span class="dispos-date">[^<]*<\/span>\s*<span class="dispos-heures">([^<]*)<\/span>/g)].map((m) => ({ date: m[1], heures: m[2] }));
+  const jours = (html) => [...html.matchAll(/class="dispos-jour" data-ouvrir-chat data-date="([\d-]+)"[^>]*>\s*<span class="dispos-date">[^<]*<\/span>\s*<span class="dispos-heures">([^<]*)<\/span>/g)].map((m) => ({ date: m[1], heures: m[2] }));
   let dispos = jours((await page('/rendez-vous')).html);
   assert.ok(dispos.length >= 3, 'plusieurs jours proposés');
-  assert.ok((await page('/')).html.includes('Prochaines disponibilités'));
   const premier = dispos[0];
+  // L'agenda : sur la une et sur la page Rendez-vous, six semaines à partir du lundi
+  const jourAgenda = (html, date) => {
+    const m = new RegExp(`<button type="button" class="agenda-jour is-(\\w+)[^"]*" data-agenda-jour data-date="${date}"[^>]*data-resume="([^"]*)"`).exec(html);
+    return m && { etat: m[1], resume: m[2] };
+  };
+  const une = (await page('/')).html;
+  assert.ok(une.includes('data-agenda') && (await page('/rendez-vous')).html.includes('data-agenda'));
+  assert.strictEqual((une.match(/class="agenda-jour /g) || []).length, 42);
+  const dimanche = [...Array(14).keys()].map((i) => ilYa(0, i + 1)).find((d) => new Date(d + 'T12:00').getDay() === 0);
+  assert.strictEqual(jourAgenda(une, dimanche).etat, 'ferme', 'le dimanche est fermé');
+  const avant = jourAgenda((await page('/rendez-vous')).html, premier.date);
+  assert.strictEqual(avant.etat, 'libre');
+  assert.ok(avant.resume.includes(premier.heures), `${avant.resume} / ${premier.heures}`);
   const debut = /^(\d{1,2})h(\d{2})?/.exec(premier.heures);
   const hh = `${debut[1].padStart(2, '0')}:${debut[2] || '00'}`;
   // Une retouche d'une heure au tout début de la première plage : la plage commence une heure plus tard.
@@ -510,6 +522,10 @@ test('prochaines disponibilités : les plages libres, moins les rendez-vous fix�
   dispos = jours((await page('/rendez-vous')).html);
   const apres = dispos.find((d) => d.date === premier.date);
   assert.ok(!apres || !apres.heures.startsWith(premier.heures.split(' – ')[0] + ' –'), `${premier.heures} → ${apres && apres.heures}`);
+  // … et l'agenda le montre aussi (sans jamais dire pour qui)
+  const apresAgenda = jourAgenda((await page('/rendez-vous')).html, premier.date);
+  assert.notStrictEqual(apresAgenda.resume, avant.resume);
+  assert.ok(!(await page('/rendez-vous')).html.includes('Essai'), 'aucun nom dans l’agenda');
   await sha('POST', `/api/sha/projets/${r.corps.id}/annuler`, {});
 });
 

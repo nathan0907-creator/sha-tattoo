@@ -68,6 +68,8 @@ window.ShaChat = (() => {
     const b = e.target.closest('[data-ouvrir-chat]');
     if (!b) return;
     e.preventDefault();
+    // Un jour choisi dans l'agenda (ou les prochaines disponibilités) : repris dans le message.
+    etat.jourSouhaite = b.dataset.jour || '';
     ouvrir({ flash: b.dataset.flash || '', evenement: 'evenement' in b.dataset });
   });
   document.getElementById('chat-fermer').addEventListener('click', fermer);
@@ -180,7 +182,7 @@ window.ShaChat = (() => {
       el('div', { class: 'field' }, el('label', { for: 'n-taille' }, 'Taille'),
         el('input', { id: 'n-taille', name: 'taille', required: true, maxlength: 40, placeholder: 'Environ 10 cm' })),
       el('div', { class: 'field' }, el('label', { for: 'n-texte' }, 'Message (facultatif)'),
-        el('textarea', { id: 'n-texte', name: 'texte', rows: 3, maxlength: 2000, placeholder: 'Noir ou couleur, date souhaitée, une précision…' })),
+        el('textarea', { id: 'n-texte', name: 'texte', rows: 3, maxlength: 2000, placeholder: 'Noir ou couleur, date souhaitée, une précision…' }, prendreJourSouhaite())),
       erreur,
       bouton('Envoyer ma demande', { type: 'submit', class: 'btn--accent btn-plein' }, 'send'));
 
@@ -221,7 +223,7 @@ window.ShaChat = (() => {
     const erreur = el('p', { class: 'field-error', role: 'alert' });
     const types = el('fieldset', { class: 'field choix-type' },
       el('legend', { class: 'field-label' }, 'L’événement'),
-      el('div', { class: 'choix-liste' }, TYPES_EVENEMENT.map((t, i) => el('label', { class: 'choix' },
+      el('div', { class: 'choix-liste' }, TYPES_EVENEMENT.map((t, i) => el('label', { class: 'choix-ev' },
         el('input', { type: 'radio', name: 'type', value: t, required: true, checked: i === 0 }), el('span', {}, t)))));
     const ch = (id, libelle, attrs, aide) => el('div', { class: 'field' },
       el('label', { for: id }, libelle), el('input', { id, ...attrs }), aide ? el('p', { class: 'field-hint' }, aide) : null);
@@ -568,6 +570,9 @@ window.ShaChat = (() => {
       }
     });
 
+    // Arrivé depuis l'agenda avec une conversation en cours : le jour choisi est proposé dans la réponse.
+    const jour = prendreJourSouhaite();
+    if (jour && p.etape !== 'annule') texte.value = jour;
     afficher([el('div', { class: 'conversation' }, rappelNotifications(), entete, fil, zoneAction), saisie],
       { titre: p.titre, sousTitre: ETAPES[p.etape], retour: retourListe });
     corps.classList.add('mode-conversation');
@@ -581,6 +586,13 @@ window.ShaChat = (() => {
         if (q.messages.length + q.etape !== etat.signature) rendre(q);
       } catch { /* réseau momentanément indisponible : on réessaie au prochain tour */ }
     }, 5000);
+  }
+
+  /** Le jour choisi dans l'agenda, en une phrase prête à envoyer (une seule fois). */
+  function prendreJourSouhaite() {
+    const jour = etat.jourSouhaite;
+    etat.jourSouhaite = '';
+    return jour ? `Je souhaiterais un rendez-vous le ${jour}, si c’est possible.` : '';
   }
 
   /**

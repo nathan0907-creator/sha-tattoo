@@ -11,7 +11,7 @@ const { appointmentFlyer } = require('./home');
 const {
   PAGES, folio, picture, button, buttonLabel, splitTitle, kicker, stamp, telHref, ratioClass, euros, messageButton,
   houseRules, appointmentSentence, hoursTable, openBadge, specialtiesTable, calendarNotices, availabilityBox,
-  socialLinks, paypalButton, videoSection, eventsFor, eventsSteps, eventsPrice,
+  socialLinks, paypalButton, videoSection, eventsFor, eventsSteps, eventsPrice, agendaCalendar,
 } = require('./components');
 
 /** L'encadré « À noter » : fermetures et horaires exceptionnels à venir. */
@@ -137,7 +137,7 @@ function eventsPage(site) {
   <section class="container section" aria-labelledby="tarif-titre">
     <h2 class="menu-group-title" id="tarif-titre" data-reveal>Les tarifs</h2>
     <div class="ev-tarif">
-      ${eventsPrice(ev, { cta: false })}
+      ${eventsPrice(ev, { cta: false, titre: false })}
       <div class="ev-cta" data-reveal data-delay="200">
         ${messageButton('Demander un devis', { evenement: true })}
         <p class="field-hint">Indiquez le type d’événement, la date et le lieu&nbsp;: le devis arrive dans vos messages.</p>
@@ -247,6 +247,7 @@ function appointment(site) {
   })}
   <div class="container annonces rdv-page">
     ${appointmentFlyer(config)}
+    ${agendaCalendar(site.agenda)}
     ${availabilityBox(site.disponibilites)}
 
     <div class="box how-box" data-reveal data-delay="120">
@@ -334,7 +335,7 @@ function find(site) {
           <span class="map-pin">${icon('pin')}</span>
         </div>
         <div class="map-facade-copy">
-          <p class="map-address">${address.full}</p>
+          <p class="map-address">${address.street},<br>${address.postalCode}&nbsp;${address.city}</p>
           <button type="button" class="btn" data-map-load>${buttonLabel('Afficher le plan')}${icon('pin')}</button>
           <p class="map-note">Le plan est fourni par Google Maps. En l'affichant, vous acceptez que Google dépose ses cookies.</p>
           <a class="link" href="${config.maps.view}" target="_blank" rel="noopener">Ouvrir dans Google Maps</a>
