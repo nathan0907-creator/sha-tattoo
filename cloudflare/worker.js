@@ -27,7 +27,22 @@ export class Salon extends DurableObject {
     serveur.sauverSiBesoin();
     // Notifications en cours d'envoi, vidéo TikTok en cours de récupération : on les laisse finir.
     this.ctx.waitUntil(serveur.travauxEnCours().then(() => serveur.sauverSiBesoin()));
+    if (!this.reveilPrevu) await this.prevoirReveil();
     return reponse;
+  }
+
+  /** Le réveil, toutes les quinze minutes : les rappels de la veille (envoyés à partir de 18 h). */
+  async alarm() {
+    serveur.tache();
+    await serveur.travauxEnCours();
+    serveur.sauverSiBesoin();
+    await this.prevoirReveil(true);
+  }
+
+  async prevoirReveil(forcer = false) {
+    const prevu = forcer ? null : await this.ctx.storage.getAlarm();
+    if (prevu === null) await this.ctx.storage.setAlarm(Date.now() + 15 * 60000);
+    this.reveilPrevu = true;
   }
 }
 

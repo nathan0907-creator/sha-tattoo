@@ -35,6 +35,11 @@
 
   async function demarrer() {
     // Une notification touchée ouvre la demande concernée (adresse « /salon?demande=<demande> »).
+    // Le rappel de la veille ouvre l'agenda (« /salon?onglet=agenda »).
+    if (new URLSearchParams(location.search).get('onglet') === 'agenda') {
+      history.replaceState(null, '', location.pathname);
+      etat.onglet = 'agenda';
+    }
     const lien = new URLSearchParams(location.search).get('demande');
     if (lien && /^[\w-]{4,40}$/.test(lien)) {
       history.replaceState(null, '', location.pathname);
@@ -658,11 +663,13 @@
             const [a, m, d] = j.split('-').map(Number);
             return el('section', { class: 'jour' },
               el('h2', {}, fmtJour.format(new Date(a, m - 1, d))),
-              el('ul', {}, ps.map((p) => el('li', {},
+              el('ul', {}, ps.map((p) => el('li', { class: 'rdv-ligne' },
                 el('button', { type: 'button', class: 'rdv', onclick: () => { etat.onglet = 'demandes'; etat.filtre = 'tous'; etat.projetId = p.id; coquille(); } },
                   el('span', { class: 'rdv-heure' }, p.creneau.debut.slice(11).replace(':', 'h')),
                   el('span', { class: 'rdv-qui' }, el('strong', {}, p.client), el('span', {}, p.titre + ' · ' + Sha.duree(p.creneau.duree))),
-                  el('span', { class: 'badge badge-' + p.etape }, ETAPES[p.etape]))))));
+                  el('span', { class: 'badge badge-' + p.etape }, ETAPES[p.etape])),
+                // Le numéro de la personne : un appui l'appelle (ou lui écrit, depuis le téléphone).
+                p.telephone ? el('a', { class: 'rdv-tel', href: 'tel:' + p.telephone.replace(/\s/g, '') }, icone('phone'), p.telephone) : null)))));
           }))
         : el('p', { class: 'vide-espace' }, 'Aucun rendez-vous à venir.')));
   }

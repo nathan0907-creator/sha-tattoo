@@ -77,7 +77,14 @@ function hoursTable(config, now) {
         <td>${row.label}</td>
       </tr>`)}
     </tbody>
-  </table>${config.hoursNote ? html`<p class="hours-note">${config.hoursNote}</p>` : ''}`;
+  </table>${hoursNote(config.hoursNote)}`;
+}
+
+/** La note sous les horaires ; « {agenda} » y devient un lien vers l'agenda. */
+function hoursNote(note) {
+  const lignes = [].concat(note || []).filter(Boolean);
+  if (!lignes.length) return '';
+  return html`<div class="hours-note">${lignes.map(l => html`<p>${l.split('{agenda}').map((morceau, i) => html`${i ? html`<a class="link" href="/rendez-vous#agenda">l’agenda</a>` : ''}${morceau}`)}</p>`)}</div>`;
 }
 
 /** « du mardi au samedi » : premier et dernier jour d'ouverture de la semaine. */

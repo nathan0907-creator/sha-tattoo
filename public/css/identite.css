@@ -488,6 +488,28 @@ h1, h2, h3 {
   object-fit: cover;
 }
 
+/* Agenda de l'espace salon : le numéro de la personne sous chaque rendez-vous */
+.rdv-tel {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  min-height: 2.5rem;
+  padding: 0 .2rem;
+  color: var(--gold);
+  font-size: .95rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.rdv-tel .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.rdv-tel:hover {
+  text-decoration: underline;
+}
+
 /* Pages légales : onglets et intertitres au trait fin */
 .legal-nav a {
   min-height: 2.6rem;
@@ -721,6 +743,14 @@ address {
 }
 
 /* La note sous les horaires (mercredi matin, samedi après-midi) */
+.hours-note p {
+  margin: 0;
+}
+
+.hours-note p + p {
+  margin-top: .35rem;
+}
+
 .hours-note {
   margin: .6rem 0 0;
   color: var(--soft);
@@ -1895,7 +1925,7 @@ img.is-planche {
 
 /* ── L'agenda : les semaines à venir, jour par jour ─────────────────────── */
 
-.agenda {
+.agenda[data-agenda] {
   display: grid;
   align-content: start;
   gap: .9rem;
@@ -2120,7 +2150,7 @@ img.is-planche {
   margin-top: .35rem;
 }
 
-.agenda .field-hint {
+.agenda[data-agenda] .field-hint {
   margin: 0;
 }
 
@@ -2147,7 +2177,7 @@ img.is-planche {
 
 /* Très petit écran : seulement le chiffre et une pastille de couleur. */
 @media (max-width: 24rem) {
-  .agenda {
+  .agenda[data-agenda] {
     padding-inline: .8rem;
   }
 

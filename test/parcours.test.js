@@ -154,6 +154,28 @@ test('notifications : la tatoueuse est prévenue des messages des clients, et le
     await travauxEnCours();
     assert.deepStrictEqual(recus.map((r) => r.url.split('/').pop()), ['client-lina', 'client-lina']);
 
+    // Le rappel de la veille : un rendez-vous fixé demain pour Lina ; à partir de 18 h, la tatoueuse
+    // (liste avec nom et numéro) et Lina (heure, adresse) sont prévenues, une seule fois.
+    const { rappelsDeLaVeille } = require('../server.js');
+    const lina = (await sha('GET', '/api/sha/clients')).corps.find((c) => c.prenom === 'Lina');
+    const html = (await page('/rendez-vous')).html;
+    const jourRdv = /class="dispos-jour" data-ouvrir-chat data-date="([\d-]+)"/.exec(html)[1];
+    const veille = new Date(jourRdv + 'T12:00:00Z');
+    veille.setUTCDate(veille.getUTCDate() - 1);
+    const laVeille = veille.toISOString().slice(0, 10);
+    const rdv = await sha('POST', '/api/sha/rendez-vous', { client: lina.id, titre: 'Retouche', debut: `${jourRdv}T14:30`, duree: 15 });
+    assert.strictEqual(rdv.status, 200, JSON.stringify(rdv.corps));
+    const liste = (await sha('GET', '/api/sha/projets')).corps;
+    assert.strictEqual(liste.find((x) => x.id === rdv.corps.id).telephone, '07 55 44 33 22', 'le numéro dans l’agenda du salon');
+    recus.length = 0;
+    assert.strictEqual(rappelsDeLaVeille({ date: laVeille, minutes: 17 * 60 }), 0, 'pas avant 18 h');
+    assert.ok(rappelsDeLaVeille({ date: laVeille, minutes: 18 * 60 + 5 }) >= 1);
+    await travauxEnCours();
+    const destinataires = recus.map((r) => r.url.split('/').pop());
+    assert.ok(destinataires.includes('salon') && destinataires.includes('client-lina'), destinataires.join(', '));
+    assert.strictEqual(rappelsDeLaVeille({ date: laVeille, minutes: 19 * 60 }), 0, 'une seule fois');
+    await sha('POST', `/api/sha/projets/${rdv.corps.id}/annuler`, {});
+
     // Un essai depuis l'espace salon
     recus.length = 0;
     assert.strictEqual((await sha('POST', '/api/sha/notifications/essai')).status, 200);
@@ -387,13 +409,15 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   const pratique = lisible((await page('/nous-trouver')).html);
   // (Le jour courant porte la mention « (aujourd'hui) » pour les lecteurs d'écran.)
   const jour = (nom, horaires) => new RegExp(`${nom} (\\(aujourd'hui\\) )?${horaires}`);
-  assert.match(pratique, jour('Mardi', '9h – 12h30 · 13h30 – 17h'));
-  assert.match(pratique, jour('Vendredi', '9h – 12h30 · 13h – 17h'));
-  assert.match(pratique, jour('Lundi', '9h – 12h30 · 13h30 – 17h'));
+  assert.match(pratique, jour('Mardi', '9h30 – 12h30 · 13h30 – 17h'));
+  assert.match(pratique, jour('Vendredi', '9h30 – 12h30 · 13h – 17h'));
+  assert.match(pratique, jour('Lundi', '9h30 – 12h30 · 13h30 – 17h'));
   assert.match(pratique, jour('Mercredi', '13h30 – 18h'));
-  assert.match(pratique, jour('Samedi', '10h – 12h30 · 13h30 – 15h'));
+  assert.match(pratique, jour('Samedi', '9h30 – 12h30 · 13h30 – 15h'));
   assert.match(pratique, jour('Dimanche', 'Fermé'));
   assert.match(pratique, /Mercredi matin : ouvert pendant les vacances scolaires/);
+  assert.match(pratique, /Horaires pouvant varier, car c’est uniquement sur rendez-vous : pensez à regarder l’agenda pour voir quand je suis au salon\./);
+  assert.ok((await page('/nous-trouver')).html.includes('<a class="link" href="/rendez-vous#agenda">l’agenda</a>'));
 
   for (const chemin of ['/prestations', '/galerie', '/mentions-legales', '/confidentialite', '/conditions', '/salon']) {
     assert.strictEqual((await page(chemin)).status, 200, chemin);
@@ -402,8 +426,8 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   const flashs = await page('/flashs');
   assert.strictEqual(flashs.status, 200);
   assert.strictEqual((flashs.html.match(/class="planche /g) || []).length, 20);
-  assert.ok(flashs.html.includes('src="/img/flashs/flash-01.jpg"') && flashs.html.includes('data-lightbox'));
-  assert.strictEqual((await fetch(base + '/img/flashs/flash-20.jpg')).status, 200);
+  assert.ok(flashs.html.includes('src="/img/flashs/flash-01.webp"') && flashs.html.includes('data-lightbox'));
+  assert.strictEqual((await fetch(base + '/img/flashs/flash-20.webp')).status, 200);
 
   // Les animations tatouage : seulement ce que Shannon a dit
   const ev = lisible((await page('/evenements')).html);
@@ -444,7 +468,7 @@ test('les pages du journal : la base de Cyrille, les informations de Sha Tattoo'
   }
 
   // Les flashs à la place des photos d'exemple (bande « En images » et galerie)
-  assert.ok(une.html.includes('src="/img/flashs/flash-01.jpg"') && !une.html.includes('realisation-1.svg'));
+  assert.ok(une.html.includes('src="/img/flashs/flash-01.webp"') && !une.html.includes('realisation-1.svg'));
   assert.ok((await page('/galerie')).html.includes('class="is-planche"'));
 
   const inconnue = await page('/nimporte-quoi');
@@ -462,7 +486,7 @@ test('fermetures, ouvertures et horaires exceptionnels ; jours fériés fermés 
   if (new Date() < new Date('2027-01-05')) {
     const fin = cal.exceptions.filter((e) => e.du >= '2026-12-24' && e.du <= '2027-01-01');
     assert.deepStrictEqual(fin.map((e) => `${e.du} ${e.type}`), ['2026-12-24 horaires', '2026-12-25 fermeture', '2026-12-30 horaires', '2026-12-31 horaires', '2027-01-01 fermeture']);
-    assert.deepStrictEqual(fin[3].plages, [{ start: 540, end: 750 }, { start: 810, end: 855 }], '31/12 : jusqu’à 14 h 15');
+    assert.deepStrictEqual(fin[3].plages, [{ start: 570, end: 750 }, { start: 810, end: 855 }], '31/12 : jusqu’à 14 h 15');
     assert.strictEqual(fin[4].au, '2027-01-05');
   }
   // Les jours fériés tombant un jour travaillé sont listés, fermés par défaut
@@ -556,10 +580,10 @@ test('l’espace salon : galerie, horaires, photo de profil, refus des faux fich
   assert.match(lisible((await page('/flashs')).html), /Déjà tatoué/);
 
   // Une planche de départ retirée : son image reste dans le site (public/img/flashs)
-  const premiere = depart.find((x) => x.src === '/img/flashs/flash-01.jpg');
+  const premiere = depart.find((x) => x.src === '/img/flashs/flash-01.webp');
   assert.strictEqual((await sha('DELETE', '/api/sha/galerie/' + premiere.id)).status, 200);
-  assert.ok(!(await page('/flashs')).html.includes('flash-01.jpg'));
-  assert.strictEqual((await fetch(base + '/img/flashs/flash-01.jpg')).status, 200);
+  assert.ok(!(await page('/flashs')).html.includes('flash-01.webp'));
+  assert.strictEqual((await fetch(base + '/img/flashs/flash-01.webp')).status, 200);
 
   // Vidéos TikTok : des liens reconnus, dans l'ordre choisi ; un lien étranger est refusé
   r = await sha('GET', '/api/sha/reglages');

@@ -81,29 +81,30 @@ module.exports = {
     height: i % 3 === 2 ? 700 : 800,
   })),
   // Les planches de flashs de Shannon (dossier « photo », 14 novembre 2026), dans public/img/flashs.
+  // Le 15 novembre 2026, agrandies et rendues plus nettes (elles faisaient 226 à 566 pixels de large).
   // Ajoutées une seule fois à la galerie : Shannon les renomme, les marque « déjà tatoué » ou les
   // retire ensuite depuis son espace, comme celles qu'elle publie elle-même.
   flashsDepart: [
-    ['flash-01.jpg', 'Fleurs de naissance, juillet à décembre', 452, 640],
-    ['flash-02.jpg', 'Bouquet fleuri', 226, 320],
-    ['flash-03.jpg', 'Léopard et fleurs', 226, 320],
-    ['flash-04.jpg', 'Super-héros', 339, 480],
-    ['flash-05.jpg', 'Lys en traits fins', 452, 640],
-    ['flash-06.jpg', 'Personnages de dessins animés', 339, 480],
-    ['flash-07.jpg', 'Joker', 339, 480],
-    ['flash-08.jpg', 'Fées', 452, 640],
-    ['flash-09.jpg', 'Ornements fins', 452, 640],
-    ['flash-10.jpg', 'Ornements et lettrages', 339, 480],
-    ['flash-11.jpg', 'Petits motifs', 339, 480],
-    ['flash-12.jpg', 'Fleurs de naissance, janvier à juin', 452, 640],
-    ['flash-13.jpg', 'Ornements', 339, 480],
-    ['flash-14.jpg', 'Fleurs et océan', 226, 320],
-    ['flash-15.jpg', 'Mandala', 339, 480],
-    ['flash-16.jpg', 'Branche ornementale', 339, 480],
-    ['flash-17.jpg', 'Branche fine', 566, 800],
-    ['flash-18.jpg', 'Petits motifs et lettrages', 339, 480],
-    ['flash-19.jpg', 'Ornement solaire', 452, 640],
-    ['flash-20.jpg', 'Venom', 226, 320],
+    ['flash-01.webp', 'Fleurs de naissance, juillet à décembre', 1130, 1600],
+    ['flash-02.webp', 'Bouquet fleuri', 1130, 1600],
+    ['flash-03.webp', 'Léopard et fleurs', 1130, 1600],
+    ['flash-04.webp', 'Super-héros', 1130, 1600],
+    ['flash-05.webp', 'Lys en traits fins', 1130, 1600],
+    ['flash-06.webp', 'Personnages de dessins animés', 1130, 1600],
+    ['flash-07.webp', 'Joker', 1130, 1600],
+    ['flash-08.webp', 'Fées', 1130, 1600],
+    ['flash-09.webp', 'Ornements fins', 1130, 1600],
+    ['flash-10.webp', 'Ornements et lettrages', 1130, 1600],
+    ['flash-11.webp', 'Petits motifs', 1130, 1600],
+    ['flash-12.webp', 'Fleurs de naissance, janvier à juin', 1130, 1600],
+    ['flash-13.webp', 'Ornements', 1130, 1600],
+    ['flash-14.webp', 'Fleurs et océan', 1130, 1600],
+    ['flash-15.webp', 'Mandala', 1130, 1600],
+    ['flash-16.webp', 'Branche ornementale', 1130, 1600],
+    ['flash-17.webp', 'Branche fine', 1132, 1600],
+    ['flash-18.webp', 'Petits motifs et lettrages', 1130, 1600],
+    ['flash-19.webp', 'Ornement solaire', 1130, 1600],
+    ['flash-20.webp', 'Venom', 1130, 1600],
   ].map(([fichier, titre, largeur, hauteur]) => ({ src: `/img/flashs/${fichier}`, titre, largeur, hauteur })),
 
   // Même chose pour la page des flashs : des planches « exemple » tant qu'aucune n'est publiée.
@@ -124,25 +125,29 @@ module.exports = {
   // Message de Shannon (14 novembre 2026) : ouverte du lundi au samedi ; fermée seulement le mercredi
   // matin (hors vacances scolaires) et le samedi après 15 h (en général). Le lundi reprend les
   // horaires du mardi (heures à confirmer par Shannon).
+  // 15 novembre 2026 : 9 h 30 au lieu de 9 h (et de 10 h le samedi) — lundi, mardi, jeudi, vendredi, samedi.
   hours: {
-    1: [['09:00', '12:30'], ['13:30', '17:00']],
-    2: [['09:00', '12:30'], ['13:30', '17:00']],
+    1: [['09:30', '12:30'], ['13:30', '17:00']],
+    2: [['09:30', '12:30'], ['13:30', '17:00']],
     3: [['13:30', '18:00']],
-    4: [['09:00', '12:30'], ['13:30', '17:00']],
-    5: [['09:00', '12:30'], ['13:00', '17:00']],
-    6: [['10:00', '12:30'], ['13:30', '15:00']],
+    4: [['09:30', '12:30'], ['13:30', '17:00']],
+    5: [['09:30', '12:30'], ['13:00', '17:00']],
+    6: [['09:30', '12:30'], ['13:30', '15:00']],
     0: [],
   },
-  // Sous le tableau des horaires.
-  hoursNote: 'Mercredi matin : ouvert pendant les vacances scolaires. Samedi : en général jusqu’à 15 h.',
+  // Sous le tableau des horaires, une phrase par ligne. « {agenda} » devient un lien vers l'agenda.
+  hoursNote: [
+    'Horaires pouvant varier, car c’est uniquement sur rendez-vous : pensez à regarder {agenda} pour voir quand je suis au salon.',
+    'Mercredi matin : ouvert pendant les vacances scolaires. Samedi : en général jusqu’à 15 h.',
+  ],
 
   // Fermetures et horaires exceptionnels donnés par Shannon : ajoutés une fois au calendrier (elle
   // les modifie ensuite dans son espace, onglet Fermetures). « cle » : pour ne jamais les ajouter deux fois.
   fermetures: [
-    { cle: 'noel-2026-a', type: 'horaires', du: '2026-12-24', horaires: '9h-12h30', motif: 'fêtes de fin d’année, fermé à partir de 13 h 30' },
+    { cle: 'noel-2026-a', type: 'horaires', du: '2026-12-24', horaires: '9h30-12h30', motif: 'fêtes de fin d’année, fermé à partir de 13 h 30' },
     { cle: 'noel-2026-b', type: 'fermeture', du: '2026-12-25', au: '2026-12-29', motif: 'fêtes de fin d’année' },
     { cle: 'noel-2026-c', type: 'horaires', du: '2026-12-30', horaires: '13h-18h', motif: 'réouverture à 13 h' },
-    { cle: 'noel-2026-d', type: 'horaires', du: '2026-12-31', horaires: '9h-12h30 / 13h30-14h15', motif: 'fermé à partir de 14 h 15' },
+    { cle: 'noel-2026-d', type: 'horaires', du: '2026-12-31', horaires: '9h30-12h30 / 13h30-14h15', motif: 'fermé à partir de 14 h 15' },
     // « jusqu'au 06/12 après-midi » : compris comme le 6 janvier 2027 (mercredi : réouverture l'après-midi).
     { cle: 'noel-2026-e', type: 'fermeture', du: '2027-01-01', au: '2027-01-05', motif: 'fêtes de fin d’année' },
   ],

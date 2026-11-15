@@ -359,6 +359,14 @@ function initialiser(nouveauStockage, { code = '' } = {}) {
   // Les planches de Shannon livrées avec le site (salon.config.js, flashsDepart) : ajoutées une seule
   // fois à la galerie. Ce sont ensuite des flashs comme les autres : elle les renomme, les marque
   // « déjà tatoué » ou les retire (leur image reste dans public/img/flashs, rien n'est effacé).
+  // Les planches de départ ont été refaites en plus net (.webp, 15 novembre 2026) : celles déjà
+  // dans la galerie suivent (même planche, nouvelle image et nouvelles dimensions).
+  for (const g of db.galerie) {
+    const m = /^\/img\/flashs\/(flash-\d\d)\.jpg$/.exec(g.src || '');
+    const neuf = m && (CONFIG.flashsDepart || []).find((f) => f.src === `/img/flashs/${m[1]}.webp`);
+    if (neuf) Object.assign(g, { src: neuf.src, largeur: neuf.largeur, hauteur: neuf.hauteur });
+  }
+
   if (!db.flashsDepart && Array.isArray(CONFIG.flashsDepart)) {
     const t = Date.now();
     CONFIG.flashsDepart.forEach((f, i) => {
@@ -370,11 +378,17 @@ function initialiser(nouveauStockage, { code = '' } = {}) {
 
   // Les fermetures données par la tatoueuse dans salon.config.js : ajoutées une seule fois au
   // calendrier (elle peut ensuite les retirer ou les changer dans l'onglet Fermetures).
+  // Si une de ces fermetures change dans salon.config.js (une heure corrigée), celle déjà au
+  // calendrier est mise à jour — tant qu'elle y est encore (la tatoueuse a pu la retirer).
   const ajoutees = new Set(db.fermeturesAjoutees || []);
   for (const f of CONFIG.fermetures || []) {
-    if (!f.cle || ajoutees.has(f.cle)) continue;
+    if (!f.cle) continue;
     const au = f.au || f.du;
-    db.exceptions.push({ id: id(), type: f.type, du: f.du, au, plages: f.type === 'fermeture' ? [] : lirePlages(f.horaires, weekday(f.du)), motif: f.motif || '', at: Date.now() });
+    const plages = f.type === 'fermeture' ? [] : lirePlages(f.horaires, weekday(f.du));
+    // (Les premières, ajoutées avant qu'on garde leur clé, se reconnaissent à leur date et leur motif.)
+    const deja = db.exceptions.find((e) => e.cle === f.cle) || (ajoutees.has(f.cle) && db.exceptions.find((e) => !e.cle && e.du === f.du && e.type === f.type && e.motif === (f.motif || '')));
+    if (deja) Object.assign(deja, { cle: f.cle, au, plages });
+    else if (!ajoutees.has(f.cle)) db.exceptions.push({ id: id(), cle: f.cle, type: f.type, du: f.du, au, plages, motif: f.motif || '', at: Date.now() });
     ajoutees.add(f.cle);
   }
   db.fermeturesAjoutees = [...ajoutees];
@@ -750,6 +764,59 @@ function notifier(cible, message) {
       }
     } catch { /* service injoignable : la notification est perdue, le message reste sur le site */ }
   })));
+}
+
+/* ------------------------------------------------------------------ */
+/* Rappels la veille                                                  */
+/* ------------------------------------------------------------------ */
+
+const HEURE_RAPPEL = 18 * 60; // 18 h, heure du salon
+const telLisible = (t) => String(t || '').replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
+
+/**
+ * La veille au soir (à partir de 18 h), une seule fois par rendez-vous :
+ *  - la tatoueuse reçoit la liste du lendemain, avec le nom et le numéro de chaque personne ;
+ *  - chaque client (avec un compte) reçoit un rappel : l'heure et l'adresse.
+ * Renvoie le nombre de rendez-vous rappelés. now : pour les tests.
+ */
+function rappelsDeLaVeille(now = nowInZone(CONFIG.timezone || 'Europe/Paris')) {
+  if (now.minutes < HEURE_RAPPEL) return 0;
+  const demain = addDays(now.date, 1);
+  const rdv = db.projets
+    .filter((p) => p.creneau && p.etape !== 'annule' && p.creneau.debut.slice(0, 10) === demain && p.rappel !== demain)
+    .sort((a, b) => a.creneau.debut.localeCompare(b.creneau.debut));
+  if (!rdv.length) return 0;
+  const r = reglages();
+  const heure = (p) => frHeure(toMinutes(p.creneau.debut.slice(11)));
+  const lignes = rdv.map((p) => {
+    const f = ficheClient(p) || {};
+    const qui = [f.prenom, f.nom].filter(Boolean).join(' ') || 'Client';
+    return `${heure(p)} · ${qui}${f.telephone ? ` · ${telLisible(f.telephone)}` : ''}${p.etape === 'creneau' ? ' (acompte pas encore reçu)' : ''}`;
+  });
+  notifier({ qui: 'sha', id: 'sha' }, {
+    title: `Demain : ${rdv.length} rendez-vous`, body: lignes.join('\n'), url: '/salon?onglet=agenda', tag: 'rappel-' + demain,
+  });
+  for (const p of rdv) {
+    p.rappel = demain;
+    if (p.client) {
+      notifier({ qui: 'client', id: p.client }, {
+        title: `Rappel : rendez-vous demain à ${heure(p)}`,
+        body: `${r.nom}, ${r.adresse}, ${r.codePostal} ${r.ville}.${p.etape === 'creneau' ? ' Pensez à l’acompte pour confirmer.' : ' À demain !'}`,
+        url: '/?messages=' + p.id, tag: 'rappel-' + p.id,
+      });
+    }
+  }
+  sauver();
+  return rdv.length;
+}
+
+/** Les tâches régulières (toutes les quelques minutes) : pour l'instant, les rappels de la veille. */
+function tache() {
+  try {
+    rappelsDeLaVeille();
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 /** À la fin d'une requête : prévenir l'autre personne de ce qui vient de se passer. */
@@ -1131,6 +1198,7 @@ route('GET', '/api/sha/projets', (req) => {
       return {
         id: p.id, titre: p.titre, etape: p.etape, maj: p.maj, creneau: p.creneau, parSalon: Boolean(p.parSalon),
         client: nomClient(p),
+        telephone: telLisible((ficheClient(p) || {}).telephone),
         apercu: dernier ? (dernier.de === 'sha' ? 'Vous : ' : '') + (dernier.texte || 'Photo envoyée') : '',
         nonLus: p.messages.slice(p.vuSha).filter((m) => m.de === 'client').length,
       };
@@ -1729,6 +1797,9 @@ if (typeof require !== 'undefined' && require.main === module) {
       if (!res.headersSent) envoyerJson(res, 500, { erreur: 'Erreur du serveur.' });
     });
   });
+  // Les rappels de la veille : vérifiés toutes les cinq minutes (et au démarrage).
+  tache();
+  setInterval(tache, 5 * 60000).unref();
   serveur.listen(PORT, () => {
     const adresse = `http://localhost:${PORT}`;
     console.log(`  Sha Tattoo est en ligne sur ${adresse}  (espace salon : ${adresse}/salon)`);
@@ -1743,6 +1814,6 @@ if (typeof require !== 'undefined' && require.main === module) {
 }
 
 module.exports = {
-  gerer, initialiser, sauverMaintenant, sauverSiBesoin, travauxEnCours, ENTETES, TYPES,
+  gerer, initialiser, sauverMaintenant, sauverSiBesoin, travauxEnCours, tache, rappelsDeLaVeille, ENTETES, TYPES,
   ageAu, contactValide, naissanceValide, lienPaypal,
 };
