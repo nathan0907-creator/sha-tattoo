@@ -22,12 +22,14 @@
   // Pas d'adresse de prévisualisation par version : Cloudflare n'en crée pas pour un site à Durable Object.
   "preview_urls": false,
 
-  // Le nom de domaine, une fois acheté et ajouté à Cloudflare : retirer les « // » des quatre lignes
-  // ci-dessous et y mettre le vrai nom, avec et sans « www. » (et « siteUrl » dans salon.config.js).
-  // "routes": [
-  //   { "pattern": "www.sha-tattoo.fr", "custom_domain": true },
-  //   { "pattern": "sha-tattoo.fr", "custom_domain": true }
-  // ],
+  // Le nom de domaine de Shannon (acheté chez Hostinger, géré par Cloudflare depuis le 15 novembre 2026),
+  // avec et sans « www. ». Les e-mails du domaine restent chez Hostinger (lignes MX, non touchées).
+  "routes": [
+    { "pattern": "shatattoo.com", "custom_domain": true },
+    { "pattern": "www.shatattoo.com", "custom_domain": true }
+  ],
+  // L'adresse …workers.dev reste ouverte : elle renvoie vers le nom de domaine (cloudflare/worker.js).
+  "workers_dev": true,
 
   // Journal des erreurs, visible dans le tableau de bord de Cloudflare.
   "observability": { "enabled": true }
