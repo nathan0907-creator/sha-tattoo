@@ -42,8 +42,10 @@ L'atelier de Cyrille. Une fois branché, **chaque envoi sur la branche `main` de
    *Activer les notifications*, puis *Envoyer un essai*.
    Sur iPhone : d'abord *Partager → Sur l'écran d'accueil*, ouvrir l'application ainsi
    installée, puis activer les notifications (Apple ne les permet que dans ce cas).
-6. **Un nom de domaine** (facultatif) — l'acheter dans Cloudflare (*Domain Registration*), puis
-   décommenter `routes` dans `wrangler.jsonc` et remplir `siteUrl` dans `salon.config.js`.
+6. **Le nom de domaine** — `shatattoo.com`, acheté chez Hostinger : ses serveurs de noms y ont été
+   remplacés par ceux de Cloudflare (`aurora` / `joaquin.ns.cloudflare.com`). Il est branché par
+   `routes` dans `wrangler.jsonc`, et `siteUrl` dans `salon.config.js`. Les e-mails du domaine
+   restent chez Hostinger : ne pas supprimer les lignes MX et TXT dans le DNS de Cloudflare.
 
 Les données en ligne (comptes, messages, photos déposées) sont séparées de celles de
 l'ordinateur. Le journal des erreurs est visible dans Cloudflare (*Workers → sha-tattoo → Logs*).
@@ -58,7 +60,9 @@ avec un fichier `.dev.vars` (jamais publié) contenant `SETUP_CODE=1234-5678`.
 
 ## L'adresse du site
 
-En ligne : **https://sha-tattoo.plantefevenathan.workers.dev** (`siteUrl` dans `salon.config.js`).
+En ligne : **https://shatattoo.com** (`siteUrl` dans `salon.config.js`). L'ancienne adresse
+https://sha-tattoo.plantefevenathan.workers.dev et `www.shatattoo.com` renvoient vers la même page
+du nom de domaine (`cloudflare/worker.js`).
 
 L'ancienne démonstration GitHub Pages (https://nathan0907-creator.github.io/sha-tattoo/) renvoie
 désormais chaque page vers la même page du vrai site (`scripts/export-demo.js`, refait à chaque

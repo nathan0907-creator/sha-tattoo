@@ -13,6 +13,7 @@ import { DurableObject } from 'cloudflare:workers';
 import serveur from '../server.js';
 import { stockageSql } from './stockage-sql.js';
 import { toFetchHandler } from './adaptateur.js';
+import config from '../salon.config.js';
 
 export class Salon extends DurableObject {
   constructor(ctx, env) {
@@ -76,9 +77,25 @@ async function morceau(request, reponse) {
   return new Response(octets.slice(debut, fin + 1), { status: 206, headers: entetes });
 }
 
+/**
+ * L'adresse …workers.dev et « www. » renvoient vers le nom de domaine (siteUrl), page pour page.
+ * Sauf ce qui fait marcher les applications déjà installées sur l'ancienne adresse : les échanges
+ * avec le serveur (/api/), le service worker et les manifestes.
+ */
+function versLeDomaine(request, url) {
+  const site = config.siteUrl ? new URL(config.siteUrl) : null;
+  if (!site || url.hostname === site.hostname) return null;
+  if (!url.hostname.endsWith('.workers.dev') && url.hostname !== `www.${site.hostname}`) return null;
+  if (request.method !== 'GET' && request.method !== 'HEAD') return null;
+  if (url.pathname.startsWith('/api/') || url.pathname === '/sw.js' || url.pathname.endsWith('.webmanifest')) return null;
+  return Response.redirect(site.origin + url.pathname + url.search, 301);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const renvoi = versLeDomaine(request, url);
+    if (renvoi) return renvoi;
     const extension = /\.[a-z0-9]+$/i.exec(url.pathname)?.[0].toLowerCase();
     const type = extension && serveur.TYPES[extension];
     // Un fichier de public/ est servi directement (les photos déposées, elles, sont dans le salon).
