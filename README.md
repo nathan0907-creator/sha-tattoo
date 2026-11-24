@@ -47,6 +47,22 @@ L'atelier de Cyrille. Une fois branché, **chaque envoi sur la branche `main` de
    `routes` dans `wrangler.jsonc`, et `siteUrl` dans `salon.config.js`. Les e-mails du domaine
    restent chez Hostinger : ne pas supprimer les lignes MX et TXT dans le DNS de Cloudflare.
 
+7. **Les rappels par e-mail** — chaque soir à 18 h, la veille d'un rendez-vous, le client reçoit
+   un e-mail (s'il a donné son adresse) en plus de la notification, et Shannon la liste du
+   lendemain à l'adresse saisie dans *Réglages → Rappels de la veille*. L'expéditeur est
+   `emailExpediteur` dans `salon.config.js` (`rappel@shatattoo.com`). Deux façons de brancher
+   l'envoi (`src/email.js`), au choix :
+   - **Resend** (gratuit jusqu'à 3 000 e-mails par mois) : créer un compte sur resend.com,
+     ajouter le domaine `shatattoo.com` (*Domains → Add domain*), copier les lignes DNS demandées
+     dans Cloudflare (*shatattoo.com → DNS*, en « DNS only »), puis créer une clé (*API Keys*)
+     et l'ajouter au Worker : *Settings → Variables and Secrets → Add*, type **Secret**, nom
+     `RESEND_API_KEY`.
+   - **Cloudflare Email Service** (formule Workers Paid) : *Email Service → Email Sending →
+     Onboard Domain → shatattoo.com*, puis ajouter `"send_email": [{ "name": "EMAIL" }]` dans
+     `wrangler.jsonc`.
+   Ne jamais toucher aux lignes MX et TXT d'Hostinger (les e-mails de Shannon). Ensuite :
+   *Réglages → Rappels de la veille → Envoyer un e-mail d'essai*.
+
 Les données en ligne (comptes, messages, photos déposées) sont séparées de celles de
 l'ordinateur. Le journal des erreurs est visible dans Cloudflare (*Workers → sha-tattoo → Logs*).
 

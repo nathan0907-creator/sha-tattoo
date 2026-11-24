@@ -21,6 +21,10 @@ module.exports = {
   // démonstration GitHub Pages renvoient ici.
   siteUrl: 'https://shatattoo.com',
 
+  // L'expéditeur des e-mails (rappels de la veille) : une adresse du nom de domaine. Les réponses
+  // vont à l'adresse de Shannon (Réglages → Rappels). Envoi : voir src/email.js et le README.
+  emailExpediteur: 'Sha Tattoo <rappel@shatattoo.com>',
+
   seo: { nearby: ['Lens', 'Harnes', 'Noyelles-sous-Lens'] },
 
   // Coordonnées. Laissez vide ('') ce que le salon n'utilise pas : la ligne disparaît du site.

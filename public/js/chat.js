@@ -320,7 +320,7 @@ window.ShaChat = (() => {
           champ('Nom', { name: 'nom', required: true, autocomplete: 'family-name', maxlength: 60 })),
         naissance,
         blocage,
-        champ('E-mail (facultatif)', { name: 'email', type: 'email', autocomplete: 'email', autocapitalize: 'off', spellcheck: 'false' }),
+        champ('E-mail (facultatif)', { name: 'email', type: 'email', autocomplete: 'email', autocapitalize: 'off', spellcheck: 'false' }, 'Pour recevoir aussi un rappel par e-mail la veille de votre rendez-vous.'),
         champ('Mot de passe', { name: 'motDePasse', type: 'password', required: true, minlength: 8, autocomplete: 'new-password' }, '8 caractères minimum.'),
         erreur,
         envoyer);
@@ -378,8 +378,32 @@ window.ShaChat = (() => {
       intro('Bonjour ' + client.prenom, 'Vos demandes et vos rendez-vous.'),
       bouton('Nouvelle conversation', { class: 'btn--accent btn-plein', onclick: () => { etat.flash = null; vueNouvelleConversation(); } }, 'plus'),
       liste,
+      client.email ? null : formulaireEmail(),
       el('button', { type: 'button', class: 'lien-discret', onclick: deconnexion }, 'Se déconnecter (' + client.contact + ')'),
     ], { sousTitre: 'Mes demandes' });
+  }
+
+  /** Sans e-mail sur le compte : le proposer, pour le rappel de la veille par e-mail. */
+  function formulaireEmail() {
+    const erreur = el('p', { class: 'field-error', role: 'alert' });
+    const champEmail = el('input', { id: 'c-rappel-email', name: 'email', type: 'email', required: true, autocomplete: 'email', autocapitalize: 'off', spellcheck: 'false' });
+    const form = el('form', { class: 'formulaire rappel-email', novalidate: true },
+      el('div', { class: 'field' },
+        el('label', { for: 'c-rappel-email' }, 'Un rappel par e-mail la veille ?'),
+        champEmail,
+        el('p', { class: 'field-hint' }, 'Facultatif : votre adresse sert seulement aux rappels de vos rendez-vous.')),
+      erreur,
+      bouton('Ajouter mon e-mail', { type: 'submit', class: 'btn--small btn--outline' }, 'check'));
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      erreur.textContent = '';
+      try {
+        const r = await api('POST', '/api/moi/email', { email: champEmail.value.trim() });
+        etat.moi.client.email = r.email;
+        form.replaceWith(el('p', { class: 'notice notice--ok', role: 'status' }, 'C’est noté : vous recevrez aussi le rappel par e-mail.'));
+      } catch (err) { erreur.textContent = err.message; }
+    });
+    return form;
   }
 
   async function deconnexion() {

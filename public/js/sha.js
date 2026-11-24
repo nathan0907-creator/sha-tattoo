@@ -859,6 +859,14 @@
         ch('paypal', 'Lien PayPal.me', { maxlength: 120, placeholder: 'paypal.me/votrenom' }, 'Avec un devis, le client arrive sur PayPal avec le montant exact de l’acompte ; le lien est aussi en bas de chaque page. Vide : PayPal n’est pas proposé.'),
         ch('wero', 'Numéro Wero', { maxlength: 40, placeholder: '06 12 34 56 78' }, 'Montré seulement aux clients qui ont un acompte à régler. Vide : Wero n’est pas proposé.'),
         ch('conditionsAcompte', 'Conditions de l’acompte', { rows: 3, maxlength: 600 })),
+      el('fieldset', {}, el('legend', {}, 'Rappels de la veille'),
+        el('p', { class: 'field-hint' }, 'Chaque soir à 18 h : une notification (et un e-mail) avec vos rendez-vous du lendemain ; vos clients reçoivent aussi le leur, par notification et par e-mail s’ils ont donné leur adresse.'),
+        ch('emailRappels', 'Votre e-mail pour les rappels', { type: 'email', maxlength: 120, autocomplete: 'email', autocapitalize: 'off', spellcheck: 'false' }, 'Jamais affiché sur le site. Les clients qui répondent à leur rappel vous écrivent à cette adresse.'),
+        r.emailActif
+          ? bouton('Envoyer un e-mail d’essai', { type: 'button', class: 'btn--small btn--outline', onclick: async () => {
+            try { await api('POST', '/api/sha/email/essai'); avis('E-mail d’essai envoyé : regardez votre boîte (et les indésirables).', 'info'); } catch (e) { gererErreur(e); }
+          } }, 'send')
+          : el('p', { class: 'notice' }, 'L’envoi des e-mails n’est pas encore branché : pour l’instant, les rappels partent seulement en notification.')),
       el('fieldset', {}, el('legend', {}, 'Mentions légales'),
         el('p', { class: 'field-hint' }, 'Obligatoires pour un site professionnel. Elles s’affichent sur la page « Mentions légales ».'),
         el('div', { class: 'deux' },

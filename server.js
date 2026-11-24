@@ -23,6 +23,7 @@ const { nowInZone, addDays, weekday, toMinutes, fromMinutes, isValidDate, WEEKDA
 const { holidaysBetween } = require('./src/holidays');
 const { pages, notFound } = require('./src/views/pages');
 const { stockageFichiers } = require('./src/stockage');
+const { choisirEnvoi } = require('./src/email');
 const notifications = require('./src/push');
 const CONFIG = require('./salon.config.js');
 
@@ -90,6 +91,8 @@ const REGLAGES_DEFAUT = {
   siret: (CONFIG.legal || {}).siret || '',
   responsable: (CONFIG.legal || {}).publisher || '',
   hebergeur: (CONFIG.legal || {}).host || '',
+  // L'adresse où Shannon reçoit, la veille à 18 h, la liste des rendez-vous du lendemain (jamais affichée).
+  emailRappels: '',
 };
 
 /** « une ligne\nune autre » → ['une ligne', 'une autre'] (lignes vides retirées). */
@@ -368,8 +371,9 @@ const accesConfigure = () => Boolean(db.sha && db.sha.identifiant && db.sha.mdp)
  * Démarre le site sur un stockage : lit les données, les complète, prépare l'accès au salon.
  *   code : le code de configuration imposé (Cloudflare) ; sinon un code est tiré au sort.
  */
-function initialiser(nouveauStockage, { code = '' } = {}) {
+function initialiser(nouveauStockage, { code = '', email = null } = {}) {
   stockage = nouveauStockage;
+  envoyeurEmail = email;
   db = { ...baseVide(), ...(stockage.lireBase() || {}) };
   if (!db.reglages || typeof db.reglages !== 'object') db.reglages = {};
   if (!Array.isArray(db.exceptions)) db.exceptions = [];
@@ -807,6 +811,80 @@ function notifier(cible, message) {
 /* Rappels la veille                                                  */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* E-mails : le rappel de la veille (src/email.js pour l'envoi)        */
+/* ------------------------------------------------------------------ */
+
+// La fonction d'envoi (Cloudflare Email Service ou Resend), donnée par initialiser() ; null sans service.
+let envoyeurEmail = null;
+
+/** Envoie en arrière-plan ; une erreur est notée dans le journal, sans rien bloquer. */
+function envoyerEmail(message) {
+  if (!envoyeurEmail || !message || !message.to) return false;
+  enArrierePlan(Promise.resolve().then(() => envoyeurEmail(message)).catch((e) => console.error('E-mail non envoyé :', e.code || '', e.message)));
+  return true;
+}
+
+const ENTITES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const echapperHtml = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ENTITES[c]);
+const adresseSite = () => (CONFIG.siteUrl || origineConnue || '').replace(/\/+$/, '');
+
+/** Un e-mail simple aux couleurs du salon : un titre, des paragraphes, un bouton facultatif. */
+function gabaritEmail(r, { titre, paragraphes, bouton }) {
+  const e = echapperHtml;
+  const site = adresseSite();
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(titre)}</title></head>
+<body style="margin:0;padding:0;background:#f4f0ec;color:#2c2038;font-family:Helvetica,Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f0ec"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e9dff0;border-radius:12px">
+<tr><td style="padding:28px 28px 8px;border-bottom:3px solid #7b2f86">
+<div style="font-family:Georgia,serif;font-size:26px;font-style:italic;color:#2c2038">${e(r.nom)}</div>
+<div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#7b2f86;padding:4px 0 12px">${e(r.surRendezVous || '')}</div></td></tr>
+<tr><td style="padding:24px 28px 8px">
+<h1 style="margin:0 0 16px;font-family:Georgia,serif;font-size:22px;font-weight:normal;color:#2c2038">${e(titre)}</h1>
+${paragraphes.map((p) => `<p style="margin:0 0 14px;font-size:16px;line-height:1.5">${e(p).replace(/\n/g, '<br>')}</p>`).join('\n')}
+${bouton ? `<p style="margin:22px 0 10px"><a href="${e(bouton.url)}" style="display:inline-block;background:#7b2f86;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:999px;font-size:15px">${e(bouton.texte)}</a></p>` : ''}
+</td></tr>
+<tr><td style="padding:16px 28px 24px;font-size:13px;line-height:1.5;color:#6b5f74;border-top:1px solid #e9dff0">
+${e(r.nom)} · ${e(r.adresse)}, ${e(r.codePostal)} ${e(r.ville)}${r.telephone ? ` · ${e(r.telephone)}` : ''}${site ? `<br><a href="${e(site)}" style="color:#7b2f86">${e(site.replace(/^https?:\/\//, ''))}</a>` : ''}
+</td></tr></table></td></tr></table></body></html>`;
+  const texte = [titre, '', ...paragraphes.flatMap((p) => [p, '']), ...(bouton ? [`${bouton.texte} : ${bouton.url}`, ''] : []),
+    '—', `${r.nom} · ${r.adresse}, ${r.codePostal} ${r.ville}${r.telephone ? ` · ${r.telephone}` : ''}`, site].join('\n');
+  return { html, text: texte.trim() + '\n' };
+}
+
+/** Le rappel au client : jour, heure, adresse, et l'acompte s'il n'est pas encore reçu. */
+function emailRappelClient(r, p, f, demain, heure) {
+  const paragraphes = [
+    `Bonjour${f.prenom ? ' ' + f.prenom : ''},`,
+    `Petit rappel : vous avez rendez-vous demain, ${jourLong(demain)}, à ${heure}, chez ${r.nom}.`,
+    `Adresse : ${r.adresse}, ${r.codePostal} ${r.ville}.`,
+  ];
+  if (p.etape === 'creneau') paragraphes.push('L’acompte n’a pas encore été reçu : pensez à le régler pour confirmer votre rendez-vous.');
+  paragraphes.push(`Un empêchement ? Prévenez-moi dès que possible, par message sur le site${r.telephone ? ` ou au ${r.telephone}` : ''}.`, 'À demain !');
+  const site = adresseSite();
+  return {
+    to: f.email,
+    replyTo: r.emailRappels || r.email || undefined,
+    subject: `Rappel : votre rendez-vous demain à ${heure} · ${r.nom}`,
+    ...gabaritEmail(r, { titre: `Rendez-vous demain à ${heure}`, paragraphes, bouton: site ? { texte: 'Voir mes messages', url: `${site}/?messages=${p.id}` } : null }),
+  };
+}
+
+/** La liste du lendemain, pour Shannon : heure, nom et numéro de chaque client. */
+function emailListeDuLendemain(r, demain, lignes) {
+  const site = adresseSite();
+  return {
+    to: r.emailRappels,
+    subject: `Demain, ${jourLong(demain)} : ${lignes.length} rendez-vous`,
+    ...gabaritEmail(r, {
+      titre: `Demain : ${lignes.length} rendez-vous`,
+      paragraphes: [`Les rendez-vous du ${jourLong(demain)} :`, lignes.join('\n')],
+      bouton: site ? { texte: 'Ouvrir l’agenda', url: `${site}/salon?onglet=agenda` } : null,
+    }),
+  };
+}
+
 const HEURE_RAPPEL = 18 * 60; // 18 h, heure du salon
 const telLisible = (t) => String(t || '').replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
 
@@ -833,6 +911,7 @@ function rappelsDeLaVeille(now = nowInZone(CONFIG.timezone || 'Europe/Paris')) {
   notifier({ qui: 'sha', id: 'sha' }, {
     title: `Demain : ${rdv.length} rendez-vous`, body: lignes.join('\n'), url: '/salon?onglet=agenda', tag: 'rappel-' + demain,
   });
+  if (r.emailRappels) envoyerEmail(emailListeDuLendemain(r, demain, lignes));
   for (const p of rdv) {
     p.rappel = demain;
     if (p.client) {
@@ -842,6 +921,8 @@ function rappelsDeLaVeille(now = nowInZone(CONFIG.timezone || 'Europe/Paris')) {
         url: '/?messages=' + p.id, tag: 'rappel-' + p.id,
       });
     }
+    const f = ficheClient(p) || {};
+    if (f.email) envoyerEmail(emailRappelClient(r, p, f, demain, heure(p)));
   }
   sauver();
   return rdv.length;
@@ -1015,7 +1096,19 @@ route('GET', '/api/moi', (req) => {
     .filter((p) => p.client === c.id)
     .sort((a, b) => b.maj - a.maj)
     .map((p) => ({ id: p.id, titre: p.titre, etape: p.etape, maj: p.maj, creneau: p.creneau, nonLus: p.messages.length - p.vuClient }));
-  return { client: { prenom: c.prenom, nom: c.nom, contact: c.contact }, projets };
+  const email = c.email || (c.typeContact === 'email' ? c.contact : '');
+  return { client: { prenom: c.prenom, nom: c.nom, contact: c.contact, email }, projets };
+});
+
+// Le client ajoute (ou change) son e-mail, pour recevoir le rappel de la veille par e-mail aussi.
+route('POST', '/api/moi/email', (req, res, corps) => {
+  const c = clientConnecte(req);
+  const email = contactValide(corps.email);
+  if (email.type !== 'email') throw new Erreur(400, 'Adresse e-mail invalide.');
+  if (db.clients.some((x) => x.id !== c.id && (x.email === email.valeur || x.contact === email.valeur))) throw new Erreur(409, 'Cette adresse e-mail est déjà utilisée par un autre compte.');
+  c.email = email.valeur;
+  sauver();
+  return { email: c.email };
 });
 
 // Une nouvelle demande. Avant d'envoyer, trois choses obligatoires pour que la tatoueuse puisse
@@ -1178,6 +1271,18 @@ route('DELETE', '/api/sha/notifications', (req, res, corps) => {
   return desabonner(corps);
 });
 // Un essai, pour que la tatoueuse voie à quoi ressemble une notification.
+route('POST', '/api/sha/email/essai', (req) => {
+  exigerSha(req);
+  const r = reglages();
+  if (!r.emailRappels) throw new Erreur(400, 'Indiquez d’abord votre adresse e-mail pour les rappels, puis enregistrez.');
+  if (!envoyeurEmail) throw new Erreur(503, 'L’envoi d’e-mails n’est pas encore branché sur le site.');
+  envoyerEmail({ to: r.emailRappels, subject: `Essai · ${r.nom}`, ...gabaritEmail(r, {
+    titre: 'Les e-mails fonctionnent',
+    paragraphes: ['Vous recevrez ici, la veille à 18 h, la liste de vos rendez-vous du lendemain.', 'Vos clients qui ont donné leur adresse e-mail reçoivent aussi un rappel à la même heure.'],
+  }) });
+  return { ok: true };
+});
+
 route('POST', '/api/sha/notifications/essai', (req) => {
   exigerSha(req);
   if (!db.abonnements.some((a) => a.qui === 'sha')) throw new Erreur(400, 'Activez d’abord les notifications sur cet appareil.');
@@ -1384,7 +1489,7 @@ route('DELETE', '/api/sha/galerie/([\\w-]+)', (req, res, corps, [gid]) => {
 
 route('GET', '/api/sha/reglages', (req) => {
   exigerSha(req);
-  return { ...reglages(), identifiant: db.sha.identifiant, videos: texteVideos() };
+  return { ...reglages(), identifiant: db.sha.identifiant, videos: texteVideos(), emailActif: !!envoyeurEmail };
 });
 
 // La photo de profil : le médaillon affiché à côté du nom du salon.
@@ -1413,12 +1518,13 @@ route('POST', '/api/sha/reglages', async (req, res, corps) => {
     instagram: 120, facebook: 160, tiktok: 120, specialites: 800, paypal: 120, wero: 40, conditionsAcompte: 600,
     style: 120, annonce: 140, description: 300, surRendezVous: 80, regleAcompte: 200, noteHoraires: 600,
     texteFlashs: 600, evChapeau: 400, evPour: 300, evPrixAvant: 60, evPrixMontant: 40, evPrixApres: 60,
-    evReperes: 600, evEtapes: 900, legalStatut: 120, siret: 30, responsable: 120, hebergeur: 200,
+    evReperes: 600, evEtapes: 900, legalStatut: 120, siret: 30, responsable: 120, hebergeur: 200, emailRappels: 120,
   };
   const prochains = { ...reglages() };
   for (const [k, max] of Object.entries(limites)) {
     if (k in corps) prochains[k] = texte(corps[k], max, k, OBLIGATOIRES.includes(k));
   }
+  if (prochains.emailRappels && contactValide(prochains.emailRappels).type !== 'email') throw new Erreur(400, 'Adresse e-mail des rappels invalide.');
   // Horaires : vérifiés jour par jour, puis réécrits toujours de la même façon.
   for (const j of [0, 1, 2, 3, 4, 5, 6]) {
     if ('h' + j in corps) prochains['h' + j] = ecrirePlages(lirePlages(texte(corps['h' + j], 80, 'Horaires', false), j));
@@ -1433,7 +1539,7 @@ route('POST', '/api/sha/reglages', async (req, res, corps) => {
   garderLesChangements(prochains);
   if (videos) remplacerVideos(videos);
   sauver();
-  return { ...reglages(), identifiant: db.sha.identifiant, videos: texteVideos() };
+  return { ...reglages(), identifiant: db.sha.identifiant, videos: texteVideos(), emailActif: !!envoyeurEmail };
 });
 
 /* --- Les vidéos TikTok : la tatoueuse colle les liens, le site garde l'identifiant de chaque
@@ -1827,7 +1933,9 @@ async function gerer(req, res) {
 
 // Sur l'ordinateur (npm start, les tests, la démo), le site démarre tout de suite sur le dossier
 // data/. Sur Cloudflare, c'est le salon (cloudflare/worker.js) qui l'initialise sur sa base.
-if (!SUR_CLOUDFLARE) initialiser(stockageFichiers(DATA));
+if (!SUR_CLOUDFLARE) {
+  initialiser(stockageFichiers(DATA), { email: choisirEnvoi(typeof process !== 'undefined' ? process.env : {}, CONFIG.emailExpediteur) });
+}
 
 if (typeof require !== 'undefined' && require.main === module) {
   const http = require('node:http');
@@ -1854,6 +1962,6 @@ if (typeof require !== 'undefined' && require.main === module) {
 }
 
 module.exports = {
-  gerer, initialiser, sauverMaintenant, sauverSiBesoin, travauxEnCours, tache, rappelsDeLaVeille, ENTETES, TYPES,
+  gerer, initialiser, definirEnvoiEmail: (f) => { envoyeurEmail = f; }, sauverMaintenant, sauverSiBesoin, travauxEnCours, tache, rappelsDeLaVeille, ENTETES, TYPES,
   ageAu, contactValide, naissanceValide, lienPaypal,
 };

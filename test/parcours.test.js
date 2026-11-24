@@ -167,6 +167,18 @@ test('notifications : la tatoueuse est prévenue des messages des clients, et le
     assert.strictEqual(rdv.status, 200, JSON.stringify(rdv.corps));
     const liste = (await sha('GET', '/api/sha/projets')).corps;
     assert.strictEqual(liste.find((x) => x.id === rdv.corps.id).telephone, '07 55 44 33 22', 'le numéro dans l’agenda du salon');
+    // Les e-mails : Lina ajoute son adresse, Shannon la sienne (Réglages → Rappels) ; un faux service les reçoit.
+    const { definirEnvoiEmail } = require('../server.js');
+    const emails = [];
+    definirEnvoiEmail(async (m) => { emails.push(m); });
+    assert.strictEqual((await client('POST', '/api/moi/email', { email: 'pas-une-adresse' })).status, 400);
+    assert.strictEqual((await client('POST', '/api/moi/email', { email: 'lina@example.fr' })).status, 200);
+    assert.strictEqual((await client('GET', '/api/moi')).corps.client.email, 'lina@example.fr');
+    assert.strictEqual((await sha('POST', '/api/sha/reglages', { emailRappels: 'faux' })).status, 400);
+    const regl = await sha('POST', '/api/sha/reglages', { emailRappels: 'shannon@example.fr' });
+    assert.strictEqual(regl.status, 200);
+    assert.strictEqual(regl.corps.emailActif, true);
+    assert.ok(!(await page('/')).html.includes('shannon@example.fr'), 'l’adresse des rappels n’est pas affichée');
     recus.length = 0;
     assert.strictEqual(rappelsDeLaVeille({ date: laVeille, minutes: 17 * 60 }), 0, 'pas avant 18 h');
     assert.ok(rappelsDeLaVeille({ date: laVeille, minutes: 18 * 60 + 5 }) >= 1);
@@ -174,6 +186,22 @@ test('notifications : la tatoueuse est prévenue des messages des clients, et le
     const destinataires = recus.map((r) => r.url.split('/').pop());
     assert.ok(destinataires.includes('salon') && destinataires.includes('client-lina'), destinataires.join(', '));
     assert.strictEqual(rappelsDeLaVeille({ date: laVeille, minutes: 19 * 60 }), 0, 'une seule fois');
+    const pourLina = emails.find((m) => m.to === 'lina@example.fr');
+    const pourShannon = emails.find((m) => m.to === 'shannon@example.fr');
+    assert.ok(pourLina && pourShannon, emails.map((m) => m.to).join(', '));
+    assert.match(pourLina.subject, /demain à 14h30/);
+    assert.match(pourLina.text, /Bonjour Lina/);
+    assert.match(pourLina.html, /Route de Lille/);
+    assert.strictEqual(pourLina.replyTo, 'shannon@example.fr');
+    // Pour regarder l'e-mail dans un navigateur : EMAIL_APERCU=dossier npm test
+    if (process.env.EMAIL_APERCU) for (const [n, m] of [['client', pourLina], ['salon', pourShannon]]) require('node:fs').writeFileSync(require('node:path').join(process.env.EMAIL_APERCU, `rappel-${n}.html`), m.html);
+    assert.match(pourShannon.text, /14h30 · Lina Roux · 07 55 44 33 22/);
+    assert.strictEqual(emails.length, 2, 'une seule fois');
+    assert.strictEqual((await sha('POST', '/api/sha/email/essai')).status, 200);
+    await travauxEnCours();
+    assert.match(emails[2].subject, /Essai/);
+    definirEnvoiEmail(null);
+    assert.strictEqual((await sha('POST', '/api/sha/email/essai')).status, 503);
     await sha('POST', `/api/sha/projets/${rdv.corps.id}/annuler`, {});
 
     // Un essai depuis l'espace salon

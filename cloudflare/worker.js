@@ -14,12 +14,17 @@ import serveur from '../server.js';
 import { stockageSql } from './stockage-sql.js';
 import { toFetchHandler } from './adaptateur.js';
 import config from '../salon.config.js';
+import { choisirEnvoi } from '../src/email.js';
 
 export class Salon extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     // Le code de première connexion de l'espace salon : le secret SETUP_CODE (README).
-    serveur.initialiser(stockageSql(ctx.storage.sql, (fn) => ctx.storage.transactionSync(fn)), { code: env.SETUP_CODE || '' });
+    // Les e-mails de rappel : la liaison EMAIL (Cloudflare Email Service) ou le secret RESEND_API_KEY (README).
+    serveur.initialiser(stockageSql(ctx.storage.sql, (fn) => ctx.storage.transactionSync(fn)), {
+      code: env.SETUP_CODE || '',
+      email: choisirEnvoi(env, config.emailExpediteur),
+    });
     this.gerer = toFetchHandler(serveur.gerer);
   }
 
