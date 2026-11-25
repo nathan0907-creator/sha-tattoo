@@ -885,6 +885,19 @@ function emailListeDuLendemain(r, demain, lignes) {
   };
 }
 
+/** Les e-mails tels que le site les envoie, avec un rendez-vous d'exemple (scripts/essai-email.js). */
+function exemplesEmail(to) {
+  const r = reglages();
+  const demain = addDays(nowInZone(CONFIG.timezone || 'Europe/Paris').date, 1);
+  return [
+    { to, subject: `Essai · ${r.nom}`, ...gabaritEmail(r, {
+      titre: 'Les e-mails fonctionnent',
+      paragraphes: ['Vous recevrez ici, la veille à 18 h, la liste de vos rendez-vous du lendemain.', 'Vos clients qui ont donné leur adresse e-mail reçoivent aussi un rappel à la même heure.'],
+    }) },
+    { ...emailRappelClient(r, { id: 'exemple', etape: 'creneau' }, { prenom: '', email: to }, demain, '14h30'), subject: `[Exemple] Rappel : votre rendez-vous demain à 14h30 · ${r.nom}` },
+  ];
+}
+
 const HEURE_RAPPEL = 18 * 60; // 18 h, heure du salon
 const telLisible = (t) => String(t || '').replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
 
@@ -1962,6 +1975,6 @@ if (typeof require !== 'undefined' && require.main === module) {
 }
 
 module.exports = {
-  gerer, initialiser, definirEnvoiEmail: (f) => { envoyeurEmail = f; }, sauverMaintenant, sauverSiBesoin, travauxEnCours, tache, rappelsDeLaVeille, ENTETES, TYPES,
+  gerer, initialiser, definirEnvoiEmail: (f) => { envoyeurEmail = f; }, exemplesEmail, sauverMaintenant, sauverSiBesoin, travauxEnCours, tache, rappelsDeLaVeille, ENTETES, TYPES,
   ageAu, contactValide, naissanceValide, lienPaypal,
 };
